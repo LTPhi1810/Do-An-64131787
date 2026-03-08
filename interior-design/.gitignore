@@ -7,12 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Thư viện và Build
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Bảo mật (QUAN TRỌNG)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor (VS Code, JetBrains)
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -21,4 +29,9 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+*.swp
+
+# Thư mục tạm
+.cache
+.parcel-cache
+.turbo
