@@ -142,7 +142,7 @@ function App() {
 
         <div className="absolute bottom-8 right-8 bg-slate-900/80 backdrop-blur-md text-white p-4 rounded-[24px] z-50 text-[10px] font-bold shadow-2xl flex flex-col gap-2 border border-white/10 pointer-events-none">
           <div className="flex items-center gap-3"><span className="bg-green-400/20 px-1.5 py-0.5 rounded text-[8px] text-green-400">R</span> XOAY VẬT THỂ</div>
-          <div className="flex items-center gap-3"><span className="bg-red-400/20 px-1.5 py-0.5 rounded text-[8px] text-red-400">BKSP</span> XÓA VẬT THỂ</div>
+          <div className="flex items-center gap-3"><span className="bg-red-400/20 px-1.5 py-0.5 rounded text-[8px] text-red-400">Backspace</span> XÓA VẬT THỂ</div>
         </div>
 
         <SceneContext.Provider value={{ updateItem, pickedItemId, setPickedItemId, mode, items, setItems }}>
