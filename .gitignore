@@ -35,3 +35,4 @@ dist-ssr
 .cache
 .parcel-cache
 .turbo
+server/.env
