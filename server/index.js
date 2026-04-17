@@ -1,13 +1,20 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const session = require('express-session');
+const passport = require('passport');
 require('dotenv').config();
+require('./config/passport');
 
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: ['http://localhost:5173'], credentials: true }));
 app.use(express.json()); // Để server đọc được dữ liệu JSON từ React gửi lên
+app.use(session({ secret: process.env.SESSION_SECRET || 'phispace-secret', resave: false, saveUninitialized: true }));
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Thêm dòng này để server biết có đường dẫn auth
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/designs', require('./routes/designRoutes'));
