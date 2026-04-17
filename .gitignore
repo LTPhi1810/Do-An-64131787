@@ -36,3 +36,4 @@ dist-ssr
 .parcel-cache
 .turbo
 server/.env
+server/smtpConfig.json
