@@ -34,33 +34,53 @@ const SceneContext = createContext();
 // ==========================================
 // 1. COMPONENT ITEM 3D (ĐÃ TRẢ VỀ UNIFORM SCALE - KHÔNG BÓP MÉO)
 // ==========================================
-function Furniture({ config }) {
+// THÊM prop itemId
+function Furniture({ config, itemId }) {
+  const { actualHeights } = useContext(SceneContext);
   const gltf = useGLTF(config.path);
 
-  const uniformScale = useMemo(() => {
+  const { uniformScale, actualHeight } = useMemo(() => {
     const tempScene = gltf.scene.clone(true);
     const box = new THREE.Box3().setFromObject(tempScene);
     const size = new THREE.Vector3();
     box.getSize(size);
 
-    // GIỮ NGUYÊN TỶ LỆ GỐC (Không bóp méo)
     const scaleX = config.size[0] / (size.x || 1);
     const scaleZ = config.size[2] / (size.z || 1);
     
     let finalScale = Math.min(scaleX, scaleZ);
 
-    // Fix chặn phóng to quá đà cho Chuột/Bàn phím và Tranh
     if (config.category === 'Accessories' && finalScale > 2.5) finalScale = 2.5;
     if (config.category === 'Painting' && finalScale > 5.0) finalScale = 5.0;
 
-    return finalScale; 
+    return { 
+      uniformScale: finalScale, 
+      // Lấy chiều cao gốc nhân với scale để ra chiều cao thật trong Unit 3D
+      actualHeight: (size.y || 1) * finalScale 
+    }; 
   }, [gltf.scene, config.path, config.size]);
+
+  // Đăng ký chiều cao vào Ref để các logic va chạm (Table) dùng tới
+  useEffect(() => {
+    if (itemId && actualHeights) {
+      actualHeights.current[itemId] = actualHeight;
+    }
+  }, [itemId, actualHeight, actualHeights]);
+
+  const isWallItem = config.category === 'Painting' || config.category === 'Door' || config.category === 'Window';
 
   return (
     <group position={config.offset || [0, 0, 0]}>
-      <Center top>
-        <Clone object={gltf.scene} scale={uniformScale} />
-      </Center>
+      {/* LOGIC QUYẾT ĐỊNH: 
+        - Nhấc Group chứa đồ vật lên đúng 1 nửa chiều cao (actualHeight / 2).
+        - Đối với đồ gắn tường (Cửa, tranh) thì giữ nguyên Y=0 vì chúng căn theo tâm là hợp lý.
+      */}
+      <group position={[0, isWallItem ? 0 : actualHeight / 2, 0]}>
+        {/* Bỏ prop `bottom`, chỉ để `<Center>` căn tâm object về 0,0,0 của Group */}
+        <Center>
+          <Clone object={gltf.scene} scale={uniformScale} />
+        </Center>
+      </group>
     </group>
   );
 }
@@ -256,6 +276,8 @@ function MainApp() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [pendingBackTarget, setPendingBackTarget] = useState(null);
 
+  const actualHeights = useRef({});
+
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('phiUser')));
   const [siteSettings, setSiteSettings] = useState({ 
     bannerText: "Thiết kế không gian sống", 
@@ -359,7 +381,7 @@ function MainApp() {
                 <button onClick={() => setMode('3D')} className={`px-10 py-2.5 rounded-xl text-[10px] font-black ${mode === '3D' ? 'bg-[#00b259] text-white shadow-md' : 'text-slate-400'}`}>3D VIEW</button>
               </div>
               
-              <SceneContext.Provider value={{ updateItem, pickedItemId, setPickedItemId, mode, items, setItems, setHasUnsavedChanges, roomConfig, modelConfigs, modalType, setModalType }}>
+              <SceneContext.Provider value={{ updateItem, pickedItemId, setPickedItemId, mode, items, setItems, setHasUnsavedChanges, roomConfig, modelConfigs, modalType, setModalType, actualHeights }}>
                 <Canvas shadows={false} gl={{ antialias: true, preserveDrawingBuffer: true }}><Suspense fallback={null}><SceneContent /></Suspense></Canvas>
               </SceneContext.Provider>
               
@@ -377,7 +399,7 @@ function MainApp() {
 }
 
 function SceneContent() {
-  const { mode, items, pickedItemId, setPickedItemId, updateItem, roomConfig, modelConfigs, setItems, setHasUnsavedChanges } = useContext(SceneContext);
+  const { mode, items, pickedItemId, setPickedItemId, updateItem, roomConfig, modelConfigs, setItems, setHasUnsavedChanges, actualHeights } = useContext(SceneContext);
 
   const getClampedPos = (x, z, size, rotation = 0) => { 
   const rad = Math.abs(rotation);
@@ -400,41 +422,38 @@ function SceneContent() {
   const checkIntersect2D = (r1, r2) => { return (r1.maxX > r2.minX && r1.minX < r2.maxX && r1.maxZ > r2.minZ && r1.minZ < r2.maxZ); };
 
   const performUpdate = (id, data) => {
-  const item = items.find(it => it.id === id); if (!item) return;
-  let updated = { ...item, ...data };
-  
-  // 1. Clamping vị trí trong phòng
-  const [clampedX, clampedZ] = getClampedPos(updated.position[0], updated.position[2], updated.size, updated.rotation);
-  updated.position = [clampedX, updated.position[1], clampedZ];
-
-  const currentItemCat = modelConfigs[updated.type]?.category || '';
-  const isWallItem = currentItemCat === 'Painting' || updated.type.includes('Painting') || updated.type.includes('Door') || updated.type.includes('Window');
-
-  // 2. Logic cho Accessories (Phụ kiện)
-  if (currentItemCat === 'Accessories' && data.position) {
-    let onTable = false;
-    let tableHeight = 0;
+    const item = items.find(it => it.id === id); if (!item) return;
+    let updated = { ...item, ...data };
     
-    const r1 = getAABB(updated, updated.position);
-    
-    for (let other of items) {
-      const otherCat = modelConfigs[other.type]?.category || '';
-      if (otherCat === 'Table') {
-        const r2 = getAABB(other, other.position);
-        if (checkIntersect2D(r1, r2)) {
-          onTable = true;
-          // Lấy chiều cao của bàn từ cấu hình hoặc mặc định
-          const tableConfig = modelConfigs[other.type];
-          tableHeight = tableConfig ? tableConfig.size[1] : 0.8; 
-          break; 
+    const [clampedX, clampedZ] = getClampedPos(updated.position[0], updated.position[2], updated.size, updated.rotation);
+    updated.position = [clampedX, updated.position[1], clampedZ];
+
+    const currentItemCat = modelConfigs[updated.type]?.category || '';
+    const isWallItem = currentItemCat === 'Painting' || updated.type.includes('Painting') || updated.type.includes('Door') || updated.type.includes('Window');
+
+    // CẬP NHẬT LOGIC CHO ACCESSORIES
+    if (currentItemCat === 'Accessories' && data.position) {
+      let onTable = false;
+      let tableHeight = 0;
+      
+      const r1 = getAABB(updated, updated.position);
+      
+      for (let other of items) {
+        const otherCat = modelConfigs[other.type]?.category || '';
+        if (otherCat === 'Table') {
+          const r2 = getAABB(other, other.position);
+          if (checkIntersect2D(r1, r2)) {
+            onTable = true;
+            // KIỂM TRA REF: Ưu tiên lấy chiều cao chính xác của 3D model. Nếu model chưa kịp load thì lấy mặc định
+            tableHeight = actualHeights.current[other.id] || (modelConfigs[other.type] ? modelConfigs[other.type].size[1] : 0.8);
+            break; 
+          }
         }
       }
-    }
-    
-    // Nếu nằm trên bàn, Y = chiều cao bàn, nếu không thì về mặt sàn (0)
-    updated.position[1] = onTable ? tableHeight : 0;
-    
-  } else if (isWallItem) {
+      
+      updated.position[1] = onTable ? tableHeight : 0;
+      
+    } else if (isWallItem) {
             const limitX = roomConfig.width / 2; const limitZ = roomConfig.length / 2;
             const dists = [Math.abs(updated.position[2] + limitZ), Math.abs(updated.position[2] - limitZ), Math.abs(updated.position[0] + limitX), Math.abs(updated.position[0] - limitX)];
             const minD = Math.min(...dists);
@@ -495,7 +514,7 @@ function SceneContent() {
             <group key={item.id} position={item.position} rotation-y={item.rotation} onClick={(e) => { e.stopPropagation(); if(mode === '2D') setPickedItemId(item.id === pickedItemId ? null : item.id); }}>
               {modelConfigs[item.type] ? (
                 <Suspense fallback={null}>
-                  <Furniture config={currentConfig} />
+                  <Furniture config={currentConfig} itemId={item.id} />
                 </Suspense>
               ) : (
                 <mesh position={[0, item.type.includes('Door') || item.type.includes('Window') ? 0 : renderSize[1] / 2, 0]} receiveShadow={false} castShadow={false}>
