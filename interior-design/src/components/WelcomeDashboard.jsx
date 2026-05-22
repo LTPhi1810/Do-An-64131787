@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Footer from './Footer';
 
 function WelcomeDashboard({ onChoice, user, settings }) {
-  // 📸 Lọc ra các ảnh được Admin cho phép hiển thị
+  //  Lọc ra các ảnh được Admin cho phép hiển thị
   const activeSlides = settings?.slides?.filter(s => s.visible) || [];
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -16,7 +16,7 @@ function WelcomeDashboard({ onChoice, user, settings }) {
   }, [activeSlides.length]);
 
   return (
-    // 🛑 SỬA LẠI DÒNG NÀY ĐỂ LĂN CHUỘT ĐƯỢC:
+    //  SỬA LẠI DÒNG NÀY ĐỂ LĂN CHUỘT ĐƯỢC:
     <div className="fixed inset-0 z-[150] bg-white overflow-y-auto flex flex-col pt-24">
       
       {/* 1. HERO SECTION */}
@@ -32,7 +32,7 @@ function WelcomeDashboard({ onChoice, user, settings }) {
         </button>
       </div>
 
-      {/* 📸 2. SLIDESHOW SECTION (Mới thêm) */}
+      {/*  2. SLIDESHOW SECTION (Mới thêm) */}
       {activeSlides.length > 0 && (
         <div className="max-w-4xl mx-auto w-full px-6 mb-20">
           <div className="relative h-[240px] md:h-[320px] rounded-[36px] overflow-hidden shadow-2xl group bg-slate-100">

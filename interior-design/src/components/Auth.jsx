@@ -10,6 +10,10 @@ function Auth({ onLoginSuccess }) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  
+  // 🆕 Thêm state cho nhập lại mật khẩu và lỗi validation
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -32,7 +36,7 @@ function Auth({ onLoginSuccess }) {
     if (incomingResetToken && incomingResetEmail) {
       setForgotMode(true);
       setResetStep('complete');
-      setResetToken(incomingResetToken);
+      setResetToken(incomingResetToken); // Mã xác nhận được lưu ngầm ở đây
       setResetEmail(decodeURIComponent(incomingResetEmail));
       setMessage('Nhập mật khẩu mới để hoàn tất đặt lại mật khẩu.');
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -44,12 +48,23 @@ function Auth({ onLoginSuccess }) {
     }
   }, [onLoginSuccess]);
 
+  //  Validation thời gian thực: Kiểm tra khớp mật khẩu ngay khi gõ
+  useEffect(() => {
+    if (confirmPassword && newPassword !== confirmPassword) {
+      setPasswordError('Mật khẩu nhập lại không khớp!');
+    } else {
+      setPasswordError('');
+    }
+  }, [newPassword, confirmPassword]);
+
   const resetForm = () => {
     setForgotMode(false);
     setResetStep('request');
     setResetEmail('');
     setResetToken('');
     setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
     setMessage('');
   };
 
@@ -86,8 +101,14 @@ function Auth({ onLoginSuccess }) {
   };
 
   const handleResetPassword = async () => {
+    // Kiểm tra logic cuối cùng trước khi gửi
+    if (newPassword !== confirmPassword) {
+      setMessage('Mật khẩu không khớp, vui lòng kiểm tra lại.');
+      return;
+    }
+
     if (!resetEmail || !resetToken || !newPassword) {
-      setMessage('Vui lòng điền đủ email, token và mật khẩu mới.');
+      setMessage('Thiếu thông tin xác thực, vui lòng thử lại từ link Gmail.');
       return;
     }
 
@@ -102,7 +123,7 @@ function Auth({ onLoginSuccess }) {
       setIsLoading(false);
       setMessage(data.msg || 'Đã đặt lại mật khẩu.');
       if (res.ok) {
-        resetForm();
+        setTimeout(resetForm, 2000); // Đợi 2 giây để user thấy thông báo thành công
       }
     } catch (err) {
       setIsLoading(false);
@@ -142,13 +163,19 @@ function Auth({ onLoginSuccess }) {
     <div className="fixed inset-0 bg-slate-100">
       <div className="absolute inset-0 bg-linear-to-br from-slate-100 via-emerald-50 to-slate-100" />
       <div className="relative mx-auto flex min-h-screen items-center justify-center px-4 py-8">
-        <div className="w-full max-w-3xl overflow-hidden rounded-[28px] bg-white shadow-[0_32px_90px_rgba(15,23,42,0.16)] ring-1 ring-slate-200">
-          <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_0.5fr]">
-            <div className="p-7 sm:p-8 lg:p-10">
+        {/* THAY ĐỔI: Nới rộng khung (lg:max-w-5xl) và cố định chiều cao (lg:h-[700px]) trên màn hình lớn */}
+        <div className="w-full max-w-3xl lg:max-w-5xl overflow-hidden rounded-[32px] bg-white shadow-[0_32px_90px_rgba(15,23,42,0.16)] ring-1 ring-slate-200 lg:h-[700px] flex flex-col">
+          {/* Đảm bảo Grid chiếm toàn bộ chiều cao của cha đã cố định */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 lg:flex-1">
+            <div className="p-7 sm:p-8 lg:p-10 lg:overflow-y-auto">
               <div className="max-w-lg">
                 <div className="text-sm font-black uppercase tracking-[0.45em] text-[#00b259]">Phi Space</div>
-                <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Chào mừng trở lại</h1>
-                <p className="mt-3 max-w-sm text-sm text-slate-600">Vui lòng nhập thông tin của bạn để đăng nhập.</p>
+                <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+                  {forgotMode ? 'Khôi phục mật khẩu' : isLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}
+                </h1>
+                <p className="mt-3 max-w-sm text-sm text-slate-600">
+                  {forgotMode ? 'Điền mật khẩu mới của bạn bên dưới.' : 'Vui lòng nhập thông tin của bạn để tiếp tục.'}
+                </p>
               </div>
 
               {forgotMode ? (
@@ -158,26 +185,14 @@ function Auth({ onLoginSuccess }) {
                     <input
                       type="email"
                       value={resetEmail}
+                      readOnly={resetStep === 'complete'}
                       onChange={(e) => setResetEmail(e.target.value)}
-                      required
-                      className="w-full rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                      placeholder="name@example.com"
+                      className="w-full rounded-[28px] border border-slate-200 bg-slate-100 px-5 py-3.5 text-sm text-slate-500 outline-none transition cursor-not-allowed"
                     />
                   </div>
 
                   {resetStep === 'complete' && (
                     <>
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Mã xác nhận</label>
-                        <input
-                          type="text"
-                          value={resetToken}
-                          onChange={(e) => setResetToken(e.target.value)}
-                          required
-                          className="w-full rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                          placeholder="Token từ email hoặc tự động điền"
-                        />
-                      </div>
                       <div>
                         <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Mật khẩu mới</label>
                         <input
@@ -189,21 +204,37 @@ function Auth({ onLoginSuccess }) {
                           placeholder="••••••••"
                         />
                       </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Nhập lại mật khẩu mới</label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                          className={`w-full rounded-[28px] border bg-slate-50 px-5 py-3.5 text-sm text-slate-900 outline-none transition focus:ring-4 ${passwordError ? 'border-rose-500 focus:ring-rose-100' : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-100'}`}
+                          placeholder="••••••••"
+                        />
+                        {/*  Hiển thị lỗi validation ngay dưới ô input */}
+                        {passwordError && (
+                          <p className="mt-1.5 ml-4 text-[11px] font-bold text-rose-600 uppercase tracking-wider">{passwordError}</p>
+                        )}
+                      </div>
                     </>
                   )}
 
-                  {message && (
-                    <div className="rounded-[28px] bg-rose-50 px-4 py-4 text-sm font-semibold text-rose-700 ring-1 ring-rose-200">
+                  {message && !passwordError && (
+                    <div className="rounded-[28px] bg-emerald-50 px-4 py-4 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200">
                       {message}
                     </div>
                   )}
 
                   <button
                     type="button"
+                    disabled={isLoading || (resetStep === 'complete' && !!passwordError)}
                     onClick={resetStep === 'complete' ? handleResetPassword : handleSendResetEmail}
-                    className="inline-flex w-full items-center justify-center rounded-[28px] bg-[#00b259] px-6 py-3.5 text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-emerald-500/20 transition hover:bg-emerald-700"
+                    className="inline-flex w-full items-center justify-center rounded-[28px] bg-[#00b259] px-6 py-3.5 text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-emerald-500/20 transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? 'Đang xử lý...' : resetStep === 'complete' ? 'Đặt lại mật khẩu' : 'Gửi liên kết đặt lại'}
+                    {isLoading ? 'Đang xử lý...' : resetStep === 'complete' ? 'Cập nhật mật khẩu' : 'Gửi liên kết đặt lại'}
                   </button>
 
                   <button
@@ -295,17 +326,22 @@ function Auth({ onLoginSuccess }) {
                 </button>
                 <p className="text-center text-sm text-slate-500">
                   {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}{' '}
-                  <button type="button" onClick={() => { setIsLogin(!isLogin); setMessage(''); }} className="font-bold text-[#00b259] hover:text-emerald-800">
+                  <button type="button" onClick={() => { setForgotMode(false); setIsLogin(!isLogin); setMessage(''); }} className="font-bold text-[#00b259] hover:text-emerald-800">
                     {isLogin ? 'Đăng ký' : 'Đăng nhập'}
                   </button>
                 </p>
               </div>
             </div>
-
-            <div className="relative overflow-hidden bg-linear-to-br from-lime-200 via-emerald-100 to-slate-100 p-5 sm:p-6 lg:p-8">
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.9),transparent_40%)]" />
-              <div className="relative flex h-full min-h-105 items-center justify-center">
-                <img src="/login.jpg" alt="Hình đăng nhập" className="absolute inset-0 h-full w-full object-cover rounded-4xl shadow-xl shadow-slate-200/40" />
+            <div className="relative hidden lg:block bg-slate-50">
+              {/* Khung chứa ảnh chiếm trọn chiều cao của form bên trái */}
+              <div className="absolute inset-0">
+                <img 
+                  src="/login.jpg" 
+                  alt="Hình đăng nhập" 
+                  className="h-full w-full object-cover" 
+                />
+                {/* Lớp phủ nhẹ để ảnh hòa quyện với thiết kế */}
+                <div className="absolute inset-0 bg-linear-to-tr from-emerald-500/10 to-transparent" />
               </div>
             </div>
           </div>

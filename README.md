@@ -1,12 +1,12 @@
-# 🏠 Ứng dụng Thiết kế Nội thất Phòng 2D/3D
+#  Ứng dụng Thiết kế Nội thất Phòng 2D/3D
 
-## 🛠️ Công nghệ sử dụng
+## ️ Công nghệ sử dụng
 
 * **Frontend:** React.js, Tailwind CSS.
 * **Đồ họa 3D:** Three.js, React Three Fiber, React Three Drei.
 * **Quản lý mã nguồn:** Git & GitHub.
 
-## 📦 Cài đặt để chạy dưới máy cục bộ
+##  Cài đặt để chạy dưới máy cục bộ
 
 1. Tải mã nguồn hoặc dùng lệnh: `git clone <đường-dẫn-repo>`
 2. Di chuyển vào thư mục dự án: `cd interior-design`

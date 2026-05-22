@@ -1,6 +1,6 @@
 import React from 'react';
 
-// ✅ MỚI: Thêm appState vào để Topbar biết đang ở trang nào
+//  MỚI: Thêm appState vào để Topbar biết đang ở trang nào
 function Topbar({ user, onLogout, onBack, appState }) { 
 
   // Hàm xử lý khi bấm vào chữ PhiSpace
@@ -35,7 +35,7 @@ function Topbar({ user, onLogout, onBack, appState }) {
             onClick={() => onBack('ADMIN')} 
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold uppercase rounded-lg shadow-sm transition-all"
           >
-            ⚙️ Quản lý hệ thống
+            ️ Quản lý hệ thống
           </button>
         )}
 

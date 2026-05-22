@@ -13,7 +13,7 @@ const loadConfig = () => {
   }
 };
 
-const saveConfig = (config) => {
+const writeConfigToFile = (config) => {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 };
 
@@ -26,13 +26,11 @@ const getTransport = async () => {
   const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : config.secure === true;
 
   if (!host || !port || !user || !pass) {
-    throw new Error('SMTP chưa được cấu hình đầy đủ. Vui lòng cấu hình SMTP trong Admin.');
+    throw new Error('SMTP chưa được cấu hình đầy đủ.');
   }
 
   return nodemailer.createTransport({
-    host,
-    port,
-    secure,
+    host, port, secure,
     auth: { user, pass },
     tls: { rejectUnauthorized: false }
   });
@@ -40,25 +38,53 @@ const getTransport = async () => {
 
 module.exports = {
   loadConfig,
-  saveConfig,
+  // ️ Ẩn thông tin nhạy cảm khi gửi về Client
   getConfig: (req, res) => {
-    const config = loadConfig();
-    return res.json({
-      host: config.host || '',
-      port: config.port || '587',
-      user: config.user || '',
-      pass: config.pass || '',
-      secure: config.secure || false,
-      fromName: config.fromName || 'PhiSpace',
-      googleClientId: config.googleClientId || '',
-      googleClientSecret: config.googleClientSecret || '',
-      googleCallbackUrl: config.googleCallbackUrl || 'http://localhost:5000/api/auth/google/callback'
-    });
+    try {
+      const config = loadConfig();
+      return res.json({
+        host: config.host || '',
+        port: config.port || '587',
+        secure: config.secure || false,
+        fromName: config.fromName || 'PhiSpace',
+        googleCallbackUrl: config.googleCallbackUrl || 'http://localhost:5000/api/auth/google/callback',
+        // Trả về rỗng để che giấu dữ liệu cũ
+        user: '', 
+        pass: '', 
+        googleClientId: '', 
+        googleClientSecret: ''
+      });
+    } catch (err) {
+      console.error(' Lỗi getConfig:', err);
+      res.status(500).json({ msg: 'Lỗi lấy cấu hình' });
+    }
   },
+
+  //  Chỉ cập nhật những trường Admin có nhập (khác rỗng)
   saveConfig: (req, res) => {
-    const { host, port, user, pass, secure, fromName, googleClientId, googleClientSecret, googleCallbackUrl } = req.body;
-    saveConfig({ host, port, user, pass, secure, fromName, googleClientId, googleClientSecret, googleCallbackUrl });
-    return res.json({ msg: 'Cấu hình SMTP và Google OAuth đã được lưu.' });
+    try {
+      const current = loadConfig();
+      const updated = {
+        ...current,
+        host: req.body.host,
+        port: req.body.port,
+        secure: req.body.secure,
+        fromName: req.body.fromName,
+        googleCallbackUrl: req.body.googleCallbackUrl
+      };
+
+      // ️ Logic Chặn ghi đè chuỗi rỗng
+      if (req.body.user && req.body.user.trim() !== "") updated.user = req.body.user;
+      if (req.body.pass && req.body.pass.trim() !== "") updated.pass = req.body.pass;
+      if (req.body.googleClientId && req.body.googleClientId.trim() !== "") updated.googleClientId = req.body.googleClientId;
+      if (req.body.googleClientSecret && req.body.googleClientSecret.trim() !== "") updated.googleClientSecret = req.body.googleClientSecret;
+
+      writeConfigToFile(updated);
+      return res.json({ msg: 'Cấu hình SMTP đã được cập nhật an toàn.' });
+    } catch (err) {
+      console.error(' Lỗi saveConfig:', err);
+      res.status(500).json({ msg: 'Lỗi lưu cấu hình' });
+    }
   },
   getTransport,
 };

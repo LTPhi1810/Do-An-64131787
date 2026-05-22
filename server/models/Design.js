@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 const DesignSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  name: { type: String, default: "Thiết kế của tôi" },
-  items: { type: Array, required: true },
-  roomConfig: { type: Object, default: { width: 10, length: 10 } },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  slotIndex: { type: Number, required: true }, // Khe save số mấy (0 -> 4)
+  items: { type: Array, default: [] },
+  roomConfig: { type: Object, default: {} },
   updatedAt: { type: Date, default: Date.now }
 });
 
