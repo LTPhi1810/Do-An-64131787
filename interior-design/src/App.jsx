@@ -31,10 +31,6 @@ const getBaseCategories = () => { return {}; };
 
 const SceneContext = createContext();
 
-// ==========================================
-// 1. COMPONENT ITEM 3D (ĐÃ TRẢ VỀ UNIFORM SCALE - KHÔNG BÓP MÉO)
-// ==========================================
-// THÊM prop itemId
 function Furniture({ config, itemId }) {
   const { actualHeights } = useContext(SceneContext);
   const gltf = useGLTF(config.path);
@@ -55,12 +51,10 @@ function Furniture({ config, itemId }) {
 
     return { 
       uniformScale: finalScale, 
-      // Lấy chiều cao gốc nhân với scale để ra chiều cao thật trong Unit 3D
       actualHeight: (size.y || 1) * finalScale 
     }; 
   }, [gltf.scene, config.path, config.size]);
 
-  // Đăng ký chiều cao vào Ref để các logic va chạm (Table) dùng tới
   useEffect(() => {
     if (itemId && actualHeights) {
       actualHeights.current[itemId] = actualHeight;
@@ -71,12 +65,7 @@ function Furniture({ config, itemId }) {
 
   return (
     <group position={config.offset || [0, 0, 0]}>
-      {/* LOGIC QUYẾT ĐỊNH: 
-        - Nhấc Group chứa đồ vật lên đúng 1 nửa chiều cao (actualHeight / 2).
-        - Đối với đồ gắn tường (Cửa, tranh) thì giữ nguyên Y=0 vì chúng căn theo tâm là hợp lý.
-      */}
       <group position={[0, isWallItem ? 0 : actualHeight / 2, 0]}>
-        {/* Bỏ prop `bottom`, chỉ để `<Center>` căn tâm object về 0,0,0 của Group */}
         <Center>
           <Clone object={gltf.scene} scale={uniformScale} />
         </Center>
@@ -85,9 +74,6 @@ function Furniture({ config, itemId }) {
   );
 }
 
-// ==========================================
-// 2. COMPONENT ĐỤC LỖ TƯỜNG 
-// ==========================================
 function CustomWall({ width, height, depth, position, rotation, holes, mode }) {
   const shape = useMemo(() => {
     const s = new THREE.Shape();
@@ -99,7 +85,6 @@ function CustomWall({ width, height, depth, position, rotation, holes, mode }) {
 
     holes.forEach(hole => {
       const hPath = new THREE.Path();
-      // Vẽ lỗ khoét ngược chiều kim đồng hồ để Three.js hiểu là đục lỗ
       hPath.moveTo(hole.x - hole.w / 2, hole.y - hole.h / 2);
       hPath.lineTo(hole.x - hole.w / 2, hole.y + hole.h / 2);
       hPath.lineTo(hole.x + hole.w / 2, hole.y + hole.h / 2);
@@ -121,7 +106,6 @@ function CustomWall({ width, height, depth, position, rotation, holes, mode }) {
 }
 
 function RoomWalls({ roomConfig, items, mode }) {
-  // Lọc ra Cửa và Cửa sổ để làm lỗ khoét
   const holes = items.filter(it => it.type.includes('Door') || it.type.includes('Window'));
 
   const backHoles = holes.filter(it => Math.abs(it.position[2] + roomConfig.length / 2) < 0.2).map(it => ({ x: it.position[0], y: it.position[1], w: it.size[0], h: it.size[1] }));
@@ -131,7 +115,6 @@ function RoomWalls({ roomConfig, items, mode }) {
 
   return (
     <group>
-      {/* SỬA LỖI TƯỜNG BAY: Trả position Y về 0 */}
       <CustomWall width={roomConfig.width} height={2.5} depth={0.2} position={[0, 0, -roomConfig.length / 2]} rotation={[0, 0, 0]} holes={backHoles} mode={mode} />
       <CustomWall width={roomConfig.width} height={2.5} depth={0.2} position={[0, 0, roomConfig.length / 2]} rotation={[0, Math.PI, 0]} holes={frontHoles} mode={mode} />
       <CustomWall width={roomConfig.length} height={2.5} depth={0.2} position={[-roomConfig.width / 2, 0, 0]} rotation={[0, Math.PI / 2, 0]} holes={leftHoles} mode={mode} />
@@ -152,86 +135,85 @@ function SelectionArrows({ size }) {
   );
 }
 
-function MiniMap({ roomConfig, items }) {
-  if (!roomConfig || !items) return <div className="w-full h-full bg-slate-800/50 rounded-2xl flex items-center justify-center text-slate-500 font-bold text-xs uppercase tracking-widest">File Trống</div>;
-  const maxDim = Math.max(roomConfig.width, roomConfig.length);
-  const scale = 200 / maxDim;
-  return (
-    <div className="relative bg-slate-700 mx-auto rounded-md border-2 border-slate-500 shadow-inner overflow-hidden flex items-center justify-center" style={{ width: 220, height: 220 }}>
-      <div className="relative bg-[#cbd5e1]" style={{ width: roomConfig.width * scale, height: roomConfig.length * scale }}>
-        {items.map(it => (
-          <div key={it.id} className="absolute bg-emerald-500 rounded-[2px] shadow-sm border border-emerald-700 opacity-90"
-                style={{
-                  width: it.size[0] * scale, height: it.size[2] * scale,
-                  left: (it.position[0] + roomConfig.width / 2 - it.size[0] / 2) * scale,
-                  top: (it.position[2] + roomConfig.length / 2 - it.size[2] / 2) * scale,
-                  transform: `rotate(${-it.rotation}rad)`
-                }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
+// COMPONENT SAVELOAD ĐÃ ĐƯỢC THIẾT KẾ LẠI HOÀN TOÀN
 function SaveLoadModal({ type, onClose, items, roomConfig, onLoad, onSaveSuccess }) {
   const [slots, setSlots] = useState([null, null, null, null, null]);
-  const [hoveredSlot, setHoveredSlot] = useState(null);
-  const [status, setStatus] = useState('Đang đọc dữ liệu...');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const localData = JSON.parse(localStorage.getItem('phiSpace_saves')) || [null, null, null, null, null];
-    setSlots(localData);
-    setStatus('Sẵn sàng (Local Database).');
-  }, [type]);
+    const fetchDesigns = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:5000/api/designs/save', { headers: { 'x-auth-token': token } });
+        if (res.ok) {
+          const data = await res.json();
+          const newSlots = [null, null, null, null, null];
+          data.forEach(d => { if (d.slotIndex >= 0 && d.slotIndex < 5) newSlots[d.slotIndex] = d; });
+          setSlots(newSlots);
+        }
+      } catch (err) { console.error(err); }
+      setIsLoading(false);
+    };
+    fetchDesigns();
+  }, []);
 
-  const handleSlotAction = (index) => {
+  const handleSlotAction = async (index) => {
     if (type === 'SAVE') {
-      setStatus(`Đang lưu vào File ${index + 1}...`);
-      setTimeout(() => {
+      try {
+        const token = localStorage.getItem('token');
+        await fetch('http://localhost:5000/api/designs/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+          body: JSON.stringify({ slotIndex: index, items, roomConfig })
+        });
+        
         const newSlots = [...slots];
         newSlots[index] = { items, roomConfig, updatedAt: Date.now() };
         setSlots(newSlots);
-        localStorage.setItem('phiSpace_saves', JSON.stringify(newSlots));
-        setStatus(`Đã lưu File ${index + 1} thành công!`);
         if (onSaveSuccess) onSaveSuccess(); 
-        setTimeout(onClose, 800);
-      }, 500);
+        setTimeout(onClose, 400); // Đóng modal nhạy hơn sau khi lưu
+      } catch (err) { alert('Lỗi khi lưu lên Database!'); }
     } else {
       if (slots[index]) { onLoad(slots[index]); onClose(); }
     }
   };
 
   return (
-    <div className="absolute inset-0 z-[1000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl bg-slate-900 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-700 overflow-hidden flex flex-col font-mono text-white">
-        <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800">
-          <h2 className="text-xl font-bold text-emerald-400">{type === 'SAVE' ? 'LƯU THIẾT KẾ VÀO BỘ NHỚ' : 'TẢI THIẾT KẾ TỪ BỘ NHỚ'}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white font-bold text-xl">✕</button>
+    <div className="absolute inset-0 z-[1000] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-white rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-slate-200 overflow-hidden flex flex-col font-sans">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h2 className="text-sm font-black uppercase tracking-widest text-[#00b259]">
+            {type === 'SAVE' ? 'LƯU THIẾT KẾ' : 'TẢI THIẾT KẾ'}
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-rose-500 hover:rotate-90 transition-all duration-300 font-bold text-xl w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm border border-slate-200">✕</button>
         </div>
-        <div className="flex h-[400px]">
-          <div className="w-1/2 border-r border-slate-700 p-4 overflow-y-auto space-y-3">
-            {slots.map((slot, i) => (
-              <button key={i} onMouseEnter={() => setHoveredSlot(i)} onMouseLeave={() => setHoveredSlot(null)} onClick={() => handleSlotAction(i)}
-                className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 flex justify-between items-center
-                  ${hoveredSlot === i ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-800'}
-                  ${!slot && type === 'LOAD' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:translate-x-2'}`}
+        
+        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto bg-white">
+          {isLoading ? (
+            <div className="text-center text-slate-400 text-sm py-10 font-bold uppercase tracking-widest">Đang tải dữ liệu...</div>
+          ) : (
+            slots.map((slot, i) => (
+              <button 
+                key={i} 
+                onClick={() => handleSlotAction(i)}
+                className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-300 flex justify-between items-center group
+                  ${slot ? 'border-emerald-100 bg-emerald-50/30 hover:border-emerald-400 hover:bg-emerald-50 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10' : 'border-slate-100 bg-slate-50/50'}
+                  ${!slot && type === 'LOAD' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1 hover:border-[#00b259] hover:shadow-lg hover:bg-white'}`}
                 disabled={!slot && type === 'LOAD'}
               >
                 <div>
-                  <div className="font-bold text-lg text-emerald-300">File {i + 1}</div>
-                  <div className="text-xs text-slate-400 mt-1">{slot ? `Cập nhật: ${new Date(slot.updatedAt).toLocaleString('vi-VN')}` : '--- TRỐNG ---'}</div>
+                  <div className="font-black text-lg text-slate-700 group-hover:text-[#00b259] transition-colors">THIẾT KẾ LƯU {i + 1}</div>
+                  <div className="text-[11px] text-slate-400 mt-1 font-semibold uppercase tracking-wider">
+                    {slot ? `Cập nhật: ${new Date(slot.updatedAt).toLocaleString('vi-VN')}` : '--- TRỐNG ---'}
+                  </div>
                 </div>
-                <div className="text-xs font-bold text-slate-500">{slot ? `${slot.items.length} Items` : ''}</div>
+                <div className={`text-[10px] font-black tracking-widest px-4 py-2 rounded-xl transition-colors ${slot ? 'text-[#00b259] bg-emerald-100 group-hover:bg-[#00b259] group-hover:text-white' : 'text-slate-400 bg-slate-200'}`}>
+                  {slot ? `${slot.items.length} ITEMS` : 'TRỐNG'}
+                </div>
               </button>
-            ))}
-          </div>
-          <div className="w-1/2 p-6 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 to-slate-900">
-            <h3 className="mb-4 text-emerald-400 font-bold uppercase tracking-widest text-xs">Preview {hoveredSlot !== null ? `File ${hoveredSlot + 1}` : ''}</h3>
-            {hoveredSlot !== null ? <MiniMap roomConfig={slots[hoveredSlot]?.roomConfig} items={slots[hoveredSlot]?.items} /> : <div className="text-slate-500 text-xs">Rê chuột vào một file để xem trước</div>}
-          </div>
+            ))
+          )}
         </div>
-        <div className="p-4 bg-slate-800 text-center text-xs text-slate-400 border-t border-slate-700">Status: <span className={status.includes('Lỗi') ? 'text-red-400' : 'text-emerald-400'}>{status}</span></div>
       </div>
     </div>
   );
@@ -294,7 +276,6 @@ function MainApp() {
           const data = await res.json(); 
           const dbModels = data.models || {};
           
-          // BƠM TỰ ĐỘNG: Gắn sẵn Door và Window vào danh sách để nó hiện trên Admin
           if (!dbModels['Door']) dbModels['Door'] = [];
           if (!dbModels['Window']) dbModels['Window'] = [];
           
@@ -335,7 +316,7 @@ function MainApp() {
     setHasUnsavedChanges(true); 
   };
 
-  if (!user) return <Auth onLoginSuccess={(u) => { localStorage.setItem('phiUser', JSON.stringify(u)); setUser(u); navigate('/dashboard'); }} />;
+  if (!user) return <Auth onLoginSuccess={(u) => { localStorage.setItem('phiUser', JSON.stringify(u)); setUser(u); navigate('/dashboard'); }} settings={siteSettings} />;
 
   return (
     <div className="relative w-screen h-screen bg-[#f1f5f9] flex overflow-hidden font-sans select-none">
@@ -352,7 +333,12 @@ function MainApp() {
       <Routes>
         <Route path="/dashboard" element={<WelcomeDashboard user={user} settings={siteSettings} onChoice={(c) => { if (c === 'CUSTOM') setShowCustomModal(true); else if (c === 'LOAD') setModalType('LOAD'); else { setItems([]); setRoomConfig({width:10,length:10}); navigate('/editor'); } }} />} />
         
-        <Route path="/admin" element={user.username === 'admin' ? <AdminDashboard onBack={() => navigate('/dashboard')} settings={siteSettings} onSaveSettings={async (newSet) => { const token = localStorage.getItem('token'); const payload = { bannerText: newSet.bannerText, slides: newSet.slides, categoryIcons: newSet.categoryIcons }; try { await fetch('http://localhost:5000/api/designs/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token }, body: JSON.stringify(payload) }); } catch (e) {} setSiteSettings(newSet); }} /> : <Navigate to="/dashboard" />} />
+        <Route path="/admin" element={(user.role === 'admin' || user.username === 'admin') ? <AdminDashboard onBack={() => navigate('/dashboard')} settings={siteSettings} onSaveSettings={async (newSet) => { 
+          const token = localStorage.getItem('token'); 
+          const payload = { bannerText: newSet.bannerText, slides: newSet.slides, categoryIcons: newSet.categoryIcons, authBgImage: newSet.authBgImage }; 
+          try { await fetch('http://localhost:5000/api/designs/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token }, body: JSON.stringify(payload) }); } catch (e) {} 
+          setSiteSettings(newSet); 
+        }} /> : <Navigate to="/dashboard" />} />
             
         <Route path="/editor" element={
           <>
@@ -370,15 +356,15 @@ function MainApp() {
               </div>
 
               <div className="mt-auto flex flex-col gap-2 mb-4 pt-4 border-t border-slate-100">
-                <button onClick={() => setModalType('SAVE')} className="py-3 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:-translate-y-1 transition-transform">Lưu</button>
-                <button onClick={() => setModalType('LOAD')} className="py-3 bg-emerald-100 text-emerald-800 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:-translate-y-1 transition-transform">Tải</button>
+                <button onClick={() => setModalType('SAVE')} className="py-3 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:-translate-y-1 transition-transform shadow-md">Lưu</button>
+                <button onClick={() => setModalType('LOAD')} className="py-3 bg-emerald-100 text-emerald-800 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:-translate-y-1 transition-transform shadow-md">Tải</button>
               </div>
             </div>
 
             <div className="flex-1 h-full relative pt-16">
-              <div className="absolute top-20 left-1/2 -translate-x-1/2 flex bg-white/90 backdrop-blur-md rounded-2xl shadow-xl p-1 z-20 border">
-                <button onClick={() => setMode('2D')} className={`px-10 py-2.5 rounded-xl text-[10px] font-black ${mode === '2D' ? 'bg-[#00b259] text-white shadow-md' : 'text-slate-400'}`}>2D DESIGN</button>
-                <button onClick={() => setMode('3D')} className={`px-10 py-2.5 rounded-xl text-[10px] font-black ${mode === '3D' ? 'bg-[#00b259] text-white shadow-md' : 'text-slate-400'}`}>3D VIEW</button>
+              <div className="absolute top-20 left-1/2 -translate-x-1/2 flex bg-white/90 backdrop-blur-md rounded-2xl shadow-xl p-1 z-20 border border-slate-100">
+                <button onClick={() => setMode('2D')} className={`px-10 py-2.5 rounded-xl text-[10px] font-black transition-colors ${mode === '2D' ? 'bg-[#00b259] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>2D DESIGN</button>
+                <button onClick={() => setMode('3D')} className={`px-10 py-2.5 rounded-xl text-[10px] font-black transition-colors ${mode === '3D' ? 'bg-[#00b259] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>3D VIEW</button>
               </div>
               
               <SceneContext.Provider value={{ updateItem, pickedItemId, setPickedItemId, mode, items, setItems, setHasUnsavedChanges, roomConfig, modelConfigs, modalType, setModalType, actualHeights }}>
@@ -431,7 +417,6 @@ function SceneContent() {
     const currentItemCat = modelConfigs[updated.type]?.category || '';
     const isWallItem = currentItemCat === 'Painting' || updated.type.includes('Painting') || updated.type.includes('Door') || updated.type.includes('Window');
 
-    // CẬP NHẬT LOGIC CHO ACCESSORIES
     if (currentItemCat === 'Accessories' && data.position) {
       let onTable = false;
       let tableHeight = 0;
@@ -444,7 +429,6 @@ function SceneContent() {
           const r2 = getAABB(other, other.position);
           if (checkIntersect2D(r1, r2)) {
             onTable = true;
-            // KIỂM TRA REF: Ưu tiên lấy chiều cao chính xác của 3D model. Nếu model chưa kịp load thì lấy mặc định
             tableHeight = actualHeights.current[other.id] || (modelConfigs[other.type] ? modelConfigs[other.type].size[1] : 0.8);
             break; 
           }
@@ -458,9 +442,8 @@ function SceneContent() {
             const dists = [Math.abs(updated.position[2] + limitZ), Math.abs(updated.position[2] - limitZ), Math.abs(updated.position[0] + limitX), Math.abs(updated.position[0] - limitX)];
             const minD = Math.min(...dists);
             
-            // XÁC ĐỊNH LÙI: Cửa nằm giữa tường (0), Tranh dán bề mặt (-0.05)
             const isHole = updated.type.includes('Door') || updated.type.includes('Window');
-            const offset = isHole ? 0 : -0.05; 
+            const offset = isHole ? 0 : -0.15;
             
             let snapX = updated.position[0], snapZ = updated.position[2], autoRot = 0;
             
@@ -470,8 +453,8 @@ function SceneContent() {
             else if (minD === dists[3]) { snapX = limitX + offset; autoRot = -Math.PI / 2; }
 
             let snapY = 1.2; 
-            if (updated.type.includes('Door')) snapY = 1.1; // Cửa giữa chạm đất
-            else if (updated.type.includes('Window')) snapY = 1.2; // Cửa sổ
+            if (updated.type.includes('Door')) snapY = 1.1; 
+            else if (updated.type.includes('Window')) snapY = 1.2;
 
             updated.position = [snapX, snapY, snapZ]; updated.rotation = autoRot;
           }
@@ -519,7 +502,6 @@ function SceneContent() {
               ) : (
                 <mesh position={[0, item.type.includes('Door') || item.type.includes('Window') ? 0 : renderSize[1] / 2, 0]} receiveShadow={false} castShadow={false}>
                   <boxGeometry args={renderSize} />
-                  {/* TRONG SUỐT ĐỂ NHÌN XUYÊN LỖ TRONG 3D, CÒN 2D LÀM MỜ ĐỂ CLICK CHUỘT DỄ DÀNG */}
                   <meshStandardMaterial 
                     color={item.type.includes('Door') ? "#5c3a21" : item.type.includes('Window') ? "#87ceeb" : "#10b981"} 
                     transparent={true} 
@@ -532,7 +514,6 @@ function SceneContent() {
           );
         })}
 
-        {/* THAY THẾ TƯỜNG BẰNG HỆ THỐNG ĐỤC LỖ MỚI */}
         <RoomWalls roomConfig={roomConfig} items={items} mode={mode} />
 
       </group>

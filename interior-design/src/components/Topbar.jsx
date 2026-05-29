@@ -5,7 +5,6 @@ function Topbar({ user, onLogout, onBack, appState }) {
 
   // Hàm xử lý khi bấm vào chữ PhiSpace
   const handleHomeClick = () => {
-
     onBack('DASHBOARD');
   };
 
@@ -27,15 +26,19 @@ function Topbar({ user, onLogout, onBack, appState }) {
       <div className="flex items-center gap-6">
         <div className="text-right border-r border-slate-100 pr-4">
           <p className="text-[10px] font-black text-slate-800 uppercase leading-none">{user?.username}</p>
-          <p className="text-[8px] font-bold text-[#00b259] uppercase tracking-tighter mt-1">Đang trực tuyến</p>
+          {/* Cập nhật nhãn để biết tài khoản đang là Admin hay User */}
+          <p className="text-[8px] font-bold text-[#00b259] uppercase tracking-tighter mt-1">
+            {user?.role === 'admin' ? 'Quyền Quản Trị' : 'Đang trực tuyến'}
+          </p>
         </div>
 
-        {user?.username === 'admin' && appState !== 'ADMIN' && (
+        {/* ĐÃ SỬA CHỖ NÀY: Kiểm tra user.role === 'admin' thay vì chỉ xét username */}
+        {(user?.role === 'admin' || user?.username === 'admin') && appState !== 'ADMIN' && (
           <button 
             onClick={() => onBack('ADMIN')} 
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold uppercase rounded-lg shadow-sm transition-all"
           >
-            ️ Quản lý hệ thống
+            ⚙️ Quản lý hệ thống
           </button>
         )}
 

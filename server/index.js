@@ -7,10 +7,11 @@ require('dotenv').config();
 require('./config/passport');
 
 const app = express();
+const path = require('path');
 
 // 1. Middleware quan trọng nhất (Phải nằm trên Routes)
 app.use(cors({ origin: ['http://localhost:5173'], credentials: true }));
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Nới rộng cổ chai cho phép gửi file 3D nặng
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

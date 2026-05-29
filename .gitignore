@@ -37,3 +37,7 @@ dist-ssr
 .turbo
 server/.env
 server/smtpConfig.json
+
+# Untracked large files (3D models, uploads)
+interior-design/public/models/
+server/uploads/

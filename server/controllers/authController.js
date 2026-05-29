@@ -51,13 +51,13 @@ exports.register = async (req, res) => {
         // Gửi trả về cả token và user
         res.status(201).json({ 
             token, 
-            user: { id: user._id, username: user.username, email: user.email },
+            user: { id: user._id, username: user.username, email: user.email, role: user.role || 'user' },
             msg: 'Đăng ký và đăng nhập thành công!' 
         });
 
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Lỗi Server rồi Phi ơi!');
+        res.status(500).send('Lỗi Server!');
     }
 };
 
@@ -150,12 +150,12 @@ exports.login = async (req, res) => {
 
         res.json({
             token,
-            user: { id: user._id, username: user.username, email: user.email },
-            msg: 'Chào mừng Phi quay trở lại PhiSpace!'
+            user: { id: user._id, username: user.username, email: user.email, role: user.role },
+            msg: 'Chào mừng quay trở lại PhiSpace!'
         });
 
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Lỗi Server rồi Phi ơi!');
+        res.status(500).send('Lỗi Server!');
     }
 };
