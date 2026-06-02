@@ -61,7 +61,7 @@ module.exports = {
   },
 
   //  Chỉ cập nhật những trường Admin có nhập (khác rỗng)
-  saveConfig: (req, res) => {
+  saveConfig: async (req, res) => { // Thêm chữ async ở đây để chạy await Notification
     try {
       const current = loadConfig();
       const updated = {
@@ -73,13 +73,23 @@ module.exports = {
         googleCallbackUrl: req.body.googleCallbackUrl
       };
 
-      // ️ Logic Chặn ghi đè chuỗi rỗng
       if (req.body.user && req.body.user.trim() !== "") updated.user = req.body.user;
       if (req.body.pass && req.body.pass.trim() !== "") updated.pass = req.body.pass;
       if (req.body.googleClientId && req.body.googleClientId.trim() !== "") updated.googleClientId = req.body.googleClientId;
       if (req.body.googleClientSecret && req.body.googleClientSecret.trim() !== "") updated.googleClientSecret = req.body.googleClientSecret;
 
       writeConfigToFile(updated);
+
+      // 👇 THÊM ĐOẠN TỰ ĐỘNG LƯU THÔNG BÁO HỆ THỐNG VÀO ĐÂY
+      try {
+        const Notification = require('../models/Notification');
+        await Notification.create({
+          actionType: 'SMTP_CHANGE',
+          message: 'Quản trị viên đã cập nhật lại thông số cấu hình hệ thống SMTP & OAuth.',
+          performedBy: 'Admin'
+        });
+      } catch (e) {}
+
       return res.json({ msg: 'Cấu hình SMTP đã được cập nhật an toàn.' });
     } catch (err) {
       console.error(' Lỗi saveConfig:', err);
@@ -88,3 +98,4 @@ module.exports = {
   },
   getTransport,
 };
+

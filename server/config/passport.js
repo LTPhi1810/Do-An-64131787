@@ -1,9 +1,8 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const User = require('../models/User');
+const Notification = require('../models/Notification'); // Thêm dòng này để gọi Thông báo
 const { loadConfig } = require('../controllers/smtpController');
 
 const config = loadConfig();
@@ -25,19 +24,28 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
 
         let user = await User.findOne({ email });
         if (!user) {
-          const randomPassword = crypto.randomBytes(20).toString('hex');
-          const hashedPassword = await bcrypt.hash(randomPassword, 10);
+          // 👉 Gán chuỗi đặc biệt để không bị lỗi Mongoose 'required'
           user = new User({
             username: profile.displayName || email.split('@')[0],
             email,
-            password: hashedPassword,
+            password: 'OAUTH_USER_NO_PASSWORD', 
             googleId: profile.id,
+            role: 'user'
           });
           await user.save();
+
+          // Kích hoạt thông báo khi có User đăng nhập bằng Google lần đầu
+          try {
+            await Notification.create({
+              actionType: 'NEW_USER',
+              message: `Người dùng "${user.username}" vừa tham gia hệ thống thông qua tài khoản Google.`,
+              performedBy: 'System'
+            });
+          } catch (e) {}
         }
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        return done(null, { token, user: { id: user._id, username: user.username, email: user.email } });
+        return done(null, { token, user: { id: user._id, username: user.username, email: user.email, role: user.role } });
       } catch (error) {
         return done(error);
       }

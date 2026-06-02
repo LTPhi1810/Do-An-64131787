@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { getTransport, loadConfig } = require('./smtpController');
+const Notification = require('../models/Notification'); // Đảm bảo đã require model Notification ở đầu file
 
 const getFromAddress = () => {
   const config = loadConfig();
@@ -30,7 +31,7 @@ exports.register = async (req, res) => {
         let user = await User.findOne({ email });
         if (user) return res.status(400).json({ msg: 'Email này đã được sử dụng!' });
 
-        // 2. Mã hóa mật khẩu (Đừng bao giờ lưu mật khẩu thô!)
+        // 2. Mã hóa mật khẩu
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -42,6 +43,18 @@ exports.register = async (req, res) => {
         });
 
         await user.save();
+
+        // 👇 TỰ ĐỘNG LƯU THÔNG BÁO XỊN XÒ VÀO DATABASE KHI CÓ USER ĐĂNG KÝ MỚI
+        try {
+            await Notification.create({
+                actionType: 'NEW_USER',
+                message: `Người dùng mới "${username}" vừa đăng ký tài khoản thành công qua hệ thống.`,
+                performedBy: 'System'
+            });
+        } catch (notiErr) {
+            console.error('Lỗi tạo thông báo đăng ký:', notiErr);
+        }
+
         const token = jwt.sign(
             { id: user._id }, 
             process.env.JWT_SECRET, 
@@ -137,15 +150,15 @@ exports.login = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) return res.status(400).json({ msg: 'Email không tồn tại!' });
 
-        // 2. So sánh mật khẩu (Giải mã cái đống loằng ngoằng trong Database để so)
+        // 2. So sánh mật khẩu
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ msg: 'Mật khẩu không đúng!' });
 
-        // 3. Tạo Token (Cái vé để React biết User đã đăng nhập)
+        // 3. Tạo Token
         const token = jwt.sign(
             { id: user._id }, 
             process.env.JWT_SECRET, 
-            { expiresIn: '1h' } // Vé có hạn trong 1 tiếng
+            { expiresIn: '1h' }
         );
 
         res.json({
@@ -157,5 +170,39 @@ exports.login = async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Lỗi Server!');
+    }
+};
+
+// 👇 THÊM HÀM XỬ LÝ ĐỔI MẬT KHẨU NÀY VÀO CUỐI FILE ĐỂ FRONTEND GỌI ĐẾN
+exports.changePassword = async (req, res) => {
+    const { username, oldPassword, newPassword } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ msg: 'Không tìm thấy tài khoản này.' });
+
+        // Logic check: Bỏ qua check mật khẩu cũ nếu đó là tài khoản Google (đang dùng pass giả)
+        if (user.password && user.password !== "OAUTH_USER_NO_PASSWORD") {
+            if (!oldPassword) return res.status(400).json({ msg: 'Vui lòng nhập mật khẩu cũ!' });
+            const isMatch = await bcrypt.compare(oldPassword, user.password);
+            if (!isMatch) return res.status(400).json({ msg: 'Mật khẩu cũ không chính xác!' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        const Notification = require('../models/Notification');
+        try {
+            await Notification.create({
+                actionType: 'USER_CHANGE',
+                message: `Tài khoản "${username}" vừa thiết lập/thay đổi mật khẩu bảo mật hệ thống thành công.`,
+                performedBy: username
+            });
+        } catch (e) {}
+
+        res.json({ msg: 'Đổi mật khẩu thành công!' });
+    } catch (error) { 
+        console.error(error);
+        res.status(500).json({ msg: 'Lỗi hệ thống khi đổi mật khẩu.' }); 
     }
 };

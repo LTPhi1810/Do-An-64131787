@@ -1,5 +1,57 @@
 import React, { useState, useEffect } from 'react';
 
+// BẢNG ĐIỂM CHUẨN PROFESSIONAL: 0 -> 5
+const getPasswordStrength = (pass) => {
+  if (!pass) return 0;
+  let score = 0;
+  
+  if (pass.length >= 8) score += 1;
+  if (pass.length >= 12) score += 1;
+  if (/[A-Z]/.test(pass)) score += 1;
+  if (/[0-9]/.test(pass)) score += 1;
+  if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+  
+  return score;
+};
+
+const PasswordStrengthBar = ({ password }) => {
+  const strength = getPasswordStrength(password);
+  
+  const getStrengthColor = () => {
+    if (strength === 1) return 'bg-rose-500';     // Rất yếu
+    if (strength === 2) return 'bg-orange-500';   // Yếu
+    if (strength === 3) return 'bg-yellow-400';   // Trung bình
+    if (strength === 4) return 'bg-emerald-400';  // Mạnh
+    if (strength === 5) return 'bg-emerald-600';  // Rất mạnh
+    return 'bg-slate-200';
+  };
+
+  const getStrengthText = () => {
+    if (!password) return 'Nhập mật khẩu';
+    if (strength <= 1) return 'Rất yếu';
+    if (strength === 2) return 'Yếu';
+    if (strength === 3) return 'Trung bình';
+    if (strength === 4) return 'Mạnh';
+    if (strength === 5) return 'Rất mạnh';
+  };
+
+  return (
+    <div className="mt-2 px-1">
+      {/* Đã chia thành 5 vạch */}
+      <div className="flex gap-1 h-1.5 w-full rounded-full overflow-hidden bg-slate-100">
+        <div className={`h-full flex-1 transition-colors duration-300 ${strength >= 1 ? getStrengthColor() : 'bg-transparent'}`}></div>
+        <div className={`h-full flex-1 transition-colors duration-300 ${strength >= 2 ? getStrengthColor() : 'bg-transparent'}`}></div>
+        <div className={`h-full flex-1 transition-colors duration-300 ${strength >= 3 ? getStrengthColor() : 'bg-transparent'}`}></div>
+        <div className={`h-full flex-1 transition-colors duration-300 ${strength >= 4 ? getStrengthColor() : 'bg-transparent'}`}></div>
+        <div className={`h-full flex-1 transition-colors duration-300 ${strength >= 5 ? getStrengthColor() : 'bg-transparent'}`}></div>
+      </div>
+      <p className={`text-[10px] font-black uppercase tracking-wider mt-1.5 text-right ${strength >= 4 ? 'text-[#00b259]' : strength === 3 ? 'text-yellow-600' : 'text-slate-400'}`}>
+        {getStrengthText()}
+      </p>
+    </div>
+  );
+};
+
 function Auth({ onLoginSuccess, settings }) {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
@@ -98,15 +150,13 @@ function Auth({ onLoginSuccess, settings }) {
     }
   };
 
-  const handleResetPassword = async () => {
-    if (newPassword !== confirmPassword) {
-      setMessage('Mật khẩu không khớp, vui lòng kiểm tra lại.');
-      return;
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!newPassword || !confirmPassword) {
+      setMessage('Vui lòng nhập đầy đủ mật khẩu mới!'); return;
     }
-
-    if (!resetEmail || !resetToken || !newPassword) {
-      setMessage('Thiếu thông tin xác thực, vui lòng thử lại từ link Gmail.');
-      return;
+    if (newPassword !== confirmPassword) {
+      setMessage('Mật khẩu không khớp, vui lòng kiểm tra lại.'); return;
     }
 
     try {
@@ -133,9 +183,19 @@ function Auth({ onLoginSuccess, settings }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const endpoint = isLogin ? 'login' : 'register';
+    e.preventDefault(); 
+    
+    if (!isLogin && !formData.username.trim()) {
+      setMessage('Vui lòng nhập Tên người dùng!'); return;
+    }
+    if (!formData.email.trim()) {
+      setMessage('Vui lòng nhập Email!'); return;
+    }
+    if (!formData.password) {
+      setMessage('Vui lòng nhập Mật khẩu!'); return;
+    }
 
+    const endpoint = isLogin ? 'login' : 'register';
     try {
       const res = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
         method: 'POST',
@@ -157,79 +217,78 @@ function Auth({ onLoginSuccess, settings }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-100">
+    // Đã xóa overflow-y-auto để chặn scrollbar
+    <div className="fixed inset-0 bg-slate-100 flex items-center justify-center">
       <div className="absolute inset-0 bg-linear-to-br from-slate-100 via-emerald-50 to-slate-100" />
-      <div className="relative mx-auto flex min-h-screen items-center justify-center px-4 py-8">
+      <div className="relative mx-auto flex w-full justify-center px-4">
         
-        {/* Form Container - Căn giữa, thu nhỏ chiều rộng và thêm shadow */}
-        <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white/95 backdrop-blur-xl shadow-[0_32px_90px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/50 p-8 sm:p-10 transition-all">
+        {/* Thu hẹp padding (p-8 -> p-6) để form gọn hơn */}
+        <div className="w-full max-w-md rounded-[32px] bg-white/95 backdrop-blur-xl shadow-[0_32px_90px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/50 p-6 sm:p-8 transition-all">
           
-          <div className="text-center mb-8">
-            <div className="inline-block text-sm font-black uppercase tracking-[0.45em] text-[#00b259] bg-emerald-50 px-4 py-1.5 rounded-full mb-4">
+          <div className="text-center mb-5">
+            <div className="inline-block text-xs font-black uppercase tracking-[0.45em] text-[#00b259] bg-emerald-50 px-3 py-1 rounded-full mb-2">
               Phi Space
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
               {forgotMode ? 'Khôi phục mật khẩu' : isLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}
             </h1>
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-1.5 text-sm text-slate-600">
               {forgotMode ? 'Điền mật khẩu mới của bạn bên dưới.' : 'Vui lòng nhập thông tin của bạn để tiếp tục.'}
             </p>
           </div>
 
           {forgotMode ? (
-            <div className="space-y-4">
+            <form noValidate onSubmit={resetStep === 'complete' ? handleResetPassword : (e) => { e.preventDefault(); handleSendResetEmail(); }} className="space-y-3">
               <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Địa chỉ email</label>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Địa chỉ email</label>
                 <input
                   type="email"
                   value={resetEmail}
                   readOnly={resetStep === 'complete'}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  className="w-full rounded-[28px] border border-slate-200 bg-slate-100 px-5 py-3.5 text-sm text-slate-500 outline-none transition cursor-not-allowed"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-500 outline-none transition cursor-not-allowed"
                 />
               </div>
 
               {resetStep === 'complete' && (
                 <>
                   <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Mật khẩu mới</label>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Mật khẩu mới</label>
                     <input
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                      className="w-full rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                       placeholder="••••••••"
                     />
+                    <PasswordStrengthBar password={newPassword} />
                   </div>
                   <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Nhập lại mật khẩu mới</label>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Nhập lại mật khẩu mới</label>
                     <input
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      className={`w-full rounded-[28px] border bg-slate-50 px-5 py-3.5 text-sm text-slate-900 outline-none transition focus:ring-4 ${passwordError ? 'border-rose-500 focus:ring-rose-100' : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-100'}`}
+                      className={`w-full rounded-2xl border bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:ring-2 ${passwordError ? 'border-rose-500 focus:ring-rose-100' : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-100'}`}
                       placeholder="••••••••"
                     />
                     {passwordError && (
-                      <p className="mt-1.5 ml-4 text-[11px] font-bold text-rose-600 uppercase tracking-wider">{passwordError}</p>
+                      <p className="mt-1 ml-2 text-[10px] font-bold text-rose-600 uppercase tracking-wider">{passwordError}</p>
                     )}
                   </div>
                 </>
               )}
 
               {message && !passwordError && (
-                <div className="rounded-[28px] bg-emerald-50 px-4 py-4 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
                   {message}
                 </div>
               )}
 
               <button
-                type="button"
+                type="submit"
                 disabled={isLoading || (resetStep === 'complete' && !!passwordError)}
-                onClick={resetStep === 'complete' ? handleResetPassword : handleSendResetEmail}
-                className="inline-flex w-full mt-2 items-center justify-center rounded-[28px] bg-[#00b259] px-6 py-3.5 text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-emerald-500/20 transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex w-full mt-2 items-center justify-center rounded-2xl bg-[#00b259] px-6 py-3 text-sm font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Đang xử lý...' : resetStep === 'complete' ? 'Cập nhật mật khẩu' : 'Gửi liên kết đặt lại'}
               </button>
@@ -237,103 +296,101 @@ function Auth({ onLoginSuccess, settings }) {
               <button
                 type="button"
                 onClick={resetForm}
-                className="inline-flex w-full items-center justify-center rounded-[28px] border border-slate-200 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+                className="inline-flex w-full mt-2 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
               >
                 Quay lại màn hình đăng nhập
               </button>
-            </div>
+            </form>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form noValidate onSubmit={handleSubmit} className="space-y-3.5">
               {!isLogin && (
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Tên người dùng</label>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Tên người dùng</label>
                   <input
                     type="text"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    required
-                    className="w-full rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                     placeholder="Tên của bạn"
                   />
                 </div>
               )}
 
               <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Địa chỉ email</label>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Địa chỉ email</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  className="w-full rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   placeholder="name@example.com"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Mật khẩu</label>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Mật khẩu</label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  className="w-full rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   placeholder="••••••••"
                 />
+                {!isLogin && <PasswordStrengthBar password={formData.password} />}
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
-                <label className="inline-flex items-center gap-3 text-sm text-slate-600 cursor-pointer">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
+                <label className="inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={remember}
                     onChange={(e) => setRemember(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-[#00b259] focus:ring-[#00b259]"
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-[#00b259] focus:ring-[#00b259]"
                   />
-                  Ghi nhớ trong 30 ngày
+                  Ghi nhớ 30 ngày
                 </label>
-                <button type="button" onClick={handleForgotPassword} className="text-sm font-bold text-[#00b259] hover:text-emerald-800 transition">
-                  Quên mật khẩu
+                <button type="button" onClick={handleForgotPassword} className="text-xs font-bold text-[#00b259] hover:text-emerald-800 transition">
+                  Quên mật khẩu?
                 </button>
               </div>
 
               {message && (
-                <div className="rounded-[28px] bg-rose-50 px-4 py-4 text-sm font-semibold text-rose-700 ring-1 ring-rose-200">
+                <div className="rounded-2xl bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
                   {message}
                 </div>
               )}
 
               <button
                 type="submit"
-                className="inline-flex w-full mt-4 items-center justify-center rounded-[28px] bg-[#00b259] px-6 py-3.5 text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-emerald-500/20 transition hover:bg-emerald-700"
+                className="inline-flex w-full mt-2 items-center justify-center rounded-2xl bg-[#00b259] px-6 py-3.5 text-sm font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-700"
               >
                 {isLogin ? 'Đăng nhập' : 'Đăng ký'}
               </button>
             </form>
           )}
 
-          <div className="mt-8 relative">
+          <div className="mt-5 relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-white px-4 text-slate-500">Hoặc</span>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-4 text-slate-400">Hoặc</span>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col gap-4">
+          <div className="mt-4 flex flex-col gap-3">
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="inline-flex w-full items-center justify-center gap-3 rounded-[28px] border border-slate-200 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+              className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
             >
-              <span className="h-5 w-5 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png')] bg-cover bg-center" />
-              Đăng nhập bằng Google
+              <span className="h-4 w-4 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png')] bg-cover bg-center" />
+              Đăng nhập Google
             </button>
             
-            <p className="text-center text-sm text-slate-500 pt-2">
+            <p className="text-center text-xs text-slate-500 pt-1">
               {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}{' '}
-              <button type="button" onClick={() => { setForgotMode(false); setIsLogin(!isLogin); setMessage(''); }} className="font-bold text-[#00b259] hover:text-emerald-800 transition">
+              <button type="button" onClick={() => { setForgotMode(false); setIsLogin(!isLogin); setMessage(''); setFormData({...formData, password: ''}); }} className="font-bold text-[#00b259] hover:text-emerald-800 transition">
                 {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
               </button>
             </p>

@@ -110,9 +110,8 @@ function RoomWalls({ roomConfig, items, mode }) {
 
   const backHoles = holes.filter(it => Math.abs(it.position[2] + roomConfig.length / 2) < 0.2).map(it => ({ x: it.position[0], y: it.position[1], w: it.size[0], h: it.size[1] }));
   const frontHoles = holes.filter(it => Math.abs(it.position[2] - roomConfig.length / 2) < 0.2).map(it => ({ x: -it.position[0], y: it.position[1], w: it.size[0], h: it.size[1] }));
-  const leftHoles = holes.filter(it => Math.abs(it.position[0] + roomConfig.width / 2) < 0.2).map(it => ({ x: it.position[2], y: it.position[1], w: it.size[0], h: it.size[1] }));
-  const rightHoles = holes.filter(it => Math.abs(it.position[0] - roomConfig.width / 2) < 0.2).map(it => ({ x: -it.position[2], y: it.position[1], w: it.size[0], h: it.size[1] }));
-
+  const leftHoles = holes.filter(it => Math.abs(it.position[0] + roomConfig.width / 2) < 0.2).map(it => ({ x: -it.position[2], y: it.position[1], w: it.size[0], h: it.size[1] }));
+  const rightHoles = holes.filter(it => Math.abs(it.position[0] - roomConfig.width / 2) < 0.2).map(it => ({ x: it.position[2], y: it.position[1], w: it.size[0], h: it.size[1] }));
   return (
     <group>
       <CustomWall width={roomConfig.width} height={2.5} depth={0.2} position={[0, 0, -roomConfig.length / 2]} rotation={[0, 0, 0]} holes={backHoles} mode={mode} />
@@ -416,6 +415,32 @@ function SceneContent() {
 
     const currentItemCat = modelConfigs[updated.type]?.category || '';
     const isWallItem = currentItemCat === 'Painting' || updated.type.includes('Painting') || updated.type.includes('Door') || updated.type.includes('Window');
+
+    if (data.position && !isWallItem && currentItemCat !== 'Accessories') {
+      const r1 = getAABB(updated, updated.position);
+      let isColliding = false;
+
+      for (let other of items) {
+        if (other.id === id) continue; // Bỏ qua chính nó
+
+        const otherCat = modelConfigs[other.type]?.category || '';
+        const isOtherWallItem = otherCat === 'Painting' || other.type.includes('Painting') || other.type.includes('Door') || other.type.includes('Window');
+        
+        // Không tính va chạm giữa đồ nội thất lớn với đồ gắn tường hoặc phụ kiện trên bàn
+        if (isOtherWallItem || otherCat === 'Accessories') continue;
+
+        const r2 = getAABB(other, other.position);
+        if (checkIntersect2D(r1, r2)) {
+          isColliding = true;
+          break;
+        }
+      }
+
+      // Nếu phát hiện chồng chéo, rollback về vị trí an toàn trước đó
+      if (isColliding) {
+        updated.position = [...item.position];
+      }
+    }
 
     if (currentItemCat === 'Accessories' && data.position) {
       let onTable = false;
