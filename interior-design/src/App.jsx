@@ -180,11 +180,11 @@ function SaveLoadModal({ type, onClose, items, roomConfig, onLoad, onSaveSuccess
   return (
     <div className="absolute inset-0 z-[1000] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-slate-200 overflow-hidden flex flex-col font-sans">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-sm font-black uppercase tracking-widest text-[#00b259]">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-center bg-slate-50/50 relative">
+          <h2 className="text-sm font-black uppercase tracking-widest text-[#00b259] w-full text-center">
             {type === 'SAVE' ? 'LƯU THIẾT KẾ' : 'TẢI THIẾT KẾ'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-rose-500 hover:rotate-90 transition-all duration-300 font-bold text-xl w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm border border-slate-200">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-rose-500 hover:rotate-90 transition-all duration-300 font-bold text-xl w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm border border-slate-200 absolute right-6">✕</button>
         </div>
         
         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto bg-white">
