@@ -658,50 +658,48 @@ const handleChangeSlideImage = (id, file) => {
         )}
 
         {/* 2. MODAL SỬA USER */}
-        {/* 2. MODAL SỬA USER (ĐÃ XẾP THÀNH TỪNG HÀNG DỌC) */}
         {editUserObj && (
-          <div className="fixed inset-0 z-[2000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-             <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden border border-slate-200">
-                <div className="bg-[#00b259] p-6 text-white flex justify-between items-center">
-                  <h2 className="text-sm font-black uppercase tracking-widest">Chỉnh sửa hồ sơ</h2>
-                  <button onClick={()=>{setEditUserObj(null); setAdminForcePass({pass:'', confirm:''})}} className="font-bold text-xl">✕</button>
-                </div>
-                <div className="p-8 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="fixed inset-0 z-[2000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 my-8">
+                  <div className="bg-[#00b259] p-5 text-white relative flex items-center justify-center shrink-0">
+                    <h2 className="text-sm font-black uppercase tracking-widest text-center w-full">Chỉnh sửa hồ sơ</h2>
+                    <button onClick={()=>{setEditUserObj(null); setAdminForcePass({pass:'', confirm:''})}} className="font-bold text-xl absolute right-6">✕</button>
+                  </div>
+                
+                <div className="p-6 space-y-4">
                   
-                  {/* Các trường thông tin xếp dọc */}
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-3">
                     <div>
                       <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tên tài khoản</label>
-                      <input type="text" value={editUserObj.username} onChange={e => setEditUserObj({...editUserObj, username: e.target.value})} className="w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold focus:border-[#00b259] transition" />
+                      <input type="text" value={editUserObj.username} onChange={e => setEditUserObj({...editUserObj, username: e.target.value})} className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold focus:border-[#00b259] transition" />
                     </div>
                     <div>
                       <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Email liên kết</label>
-                      <input type="text" value={editUserObj.email} onChange={e => setEditUserObj({...editUserObj, email: e.target.value})} className="w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold focus:border-[#00b259] transition" />
+                      <input type="text" value={editUserObj.email} onChange={e => setEditUserObj({...editUserObj, email: e.target.value})} className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold focus:border-[#00b259] transition" />
                     </div>
                     <div>
                       <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Phân quyền (Role)</label>
-                      <select value={editUserObj.role} onChange={e => setEditUserObj({...editUserObj, role: e.target.value})} className="w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold focus:border-[#00b259] cursor-pointer">
+                      <select value={editUserObj.role} onChange={e => setEditUserObj({...editUserObj, role: e.target.value})} className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold focus:border-[#00b259] cursor-pointer">
                         <option value="user">USER (Người Dùng)</option>
                         <option value="admin">ADMIN (Quản Trị Viên)</option>
                       </select>
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-6 border-t border-slate-100">
-                    <h4 className="text-xs font-black uppercase text-rose-500 tracking-widest mb-3">Khu vực ép đổi mật khẩu</h4>
-                    {/* Cột dọc cho mật khẩu giống bên user */}
-                    <div className="space-y-3">
-                      <input type="text" placeholder="Mật khẩu mới..." value={adminForcePass.pass} onChange={e => setAdminForcePass({...adminForcePass, pass: e.target.value})} className="w-full p-3.5 bg-rose-50/50 border border-rose-100 rounded-xl outline-none text-sm font-bold focus:border-rose-400 placeholder:text-rose-300" />
-                      <input type="text" placeholder="Nhập lại mật khẩu..." value={adminForcePass.confirm} onChange={e => setAdminForcePass({...adminForcePass, confirm: e.target.value})} className="w-full p-3.5 bg-rose-50/50 border border-rose-100 rounded-xl outline-none text-sm font-bold focus:border-rose-400 placeholder:text-rose-300" />
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <h4 className="text-xs font-black uppercase text-rose-500 tracking-widest mb-2.5">Khu vực ép đổi mật khẩu</h4>
+                    <div className="space-y-2.5">
+                      <input type="text" placeholder="Mật khẩu mới..." value={adminForcePass.pass} onChange={e => setAdminForcePass({...adminForcePass, pass: e.target.value})} className="w-full p-3 bg-rose-50/50 border border-rose-100 rounded-xl outline-none text-sm font-bold focus:border-rose-400 placeholder:text-rose-300" />
+                      <input type="text" placeholder="Nhập lại mật khẩu..." value={adminForcePass.confirm} onChange={e => setAdminForcePass({...adminForcePass, confirm: e.target.value})} className="w-full p-3 bg-rose-50/50 border border-rose-100 rounded-xl outline-none text-sm font-bold focus:border-rose-400 placeholder:text-rose-300" />
                     </div>
                   </div>
 
-                  <div className="flex gap-4 pt-4 mt-2">
-                     <button onClick={()=>{setEditUserObj(null); setAdminForcePass({pass:'', confirm:''})}} className="flex-1 py-3.5 bg-slate-100 text-slate-600 rounded-xl font-bold uppercase text-xs hover:bg-slate-200 transition">Hủy bỏ</button>
-                     <button onClick={handleUpdateUser} className="flex-1 py-3.5 bg-slate-900 text-white rounded-xl font-black uppercase text-xs hover:-translate-y-1 transition shadow-md">Lưu cập nhật</button>
+                  <div className="flex gap-4 pt-2 mt-2">
+                    <button onClick={()=>{setEditUserObj(null); setAdminForcePass({pass:'', confirm:''})}} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold uppercase text-xs hover:bg-slate-200 transition">Hủy bỏ</button>
+                    <button onClick={handleUpdateUser} className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-black uppercase text-xs hover:-translate-y-1 transition shadow-md">Lưu cập nhật</button>
                   </div>
                 </div>
-             </div>
+            </div>
           </div>
         )}
 
