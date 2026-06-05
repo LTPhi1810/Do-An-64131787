@@ -138,12 +138,17 @@ function SelectionArrows({ size }) {
 function SaveLoadModal({ type, onClose, items, roomConfig, onLoad, onSaveSuccess }) {
   const [slots, setSlots] = useState([null, null, null, null, null]);
   const [isLoading, setIsLoading] = useState(true);
+  // State quản lý việc hiển thị chữ "Đã lưu" cho từng slot riêng biệt
+  const [savedSlotIndex, setSavedSlotIndex] = useState(null);
 
   useEffect(() => {
     const fetchDesigns = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/designs/save', { headers: { 'x-auth-token': token } });
+        const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('phiUser'))?.token;
+        const res = await fetch('http://localhost:5000/api/designs/save', { 
+          headers: { 'x-auth-token': token } 
+        });
+        
         if (res.ok) {
           const data = await res.json();
           const newSlots = [null, null, null, null, null];
@@ -159,19 +164,29 @@ function SaveLoadModal({ type, onClose, items, roomConfig, onLoad, onSaveSuccess
   const handleSlotAction = async (index) => {
     if (type === 'SAVE') {
       try {
-        const token = localStorage.getItem('token');
-        await fetch('http://localhost:5000/api/designs/save', {
+        const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('phiUser'))?.token;
+        const res = await fetch('http://localhost:5000/api/designs/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
           body: JSON.stringify({ slotIndex: index, items, roomConfig })
         });
         
+        if (!res.ok) throw new Error('Lỗi xác thực (401)');
+        
         const newSlots = [...slots];
         newSlots[index] = { items, roomConfig, updatedAt: Date.now() };
         setSlots(newSlots);
         if (onSaveSuccess) onSaveSuccess(); 
-        setTimeout(onClose, 400); // Đóng modal nhạy hơn sau khi lưu
-      } catch (err) { alert('Lỗi khi lưu lên Database!'); }
+        
+        // BỎ ALERT - Kích hoạt hiệu ứng thông báo mượt tại dòng chữ
+        setSavedSlotIndex(index);
+        setTimeout(() => {
+          setSavedSlotIndex(null);
+        }, 2000);
+
+      } catch (err) { 
+        alert('Không thể lưu! Vui lòng kiểm tra lại đăng nhập.'); 
+      }
     } else {
       if (slots[index]) { onLoad(slots[index]); onClose(); }
     }
@@ -195,19 +210,24 @@ function SaveLoadModal({ type, onClose, items, roomConfig, onLoad, onSaveSuccess
               <button 
                 key={i} 
                 onClick={() => handleSlotAction(i)}
-                className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-300 flex justify-between items-center group
+                className={`w-full p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col justify-center items-center group
                   ${slot ? 'border-emerald-100 bg-emerald-50/30 hover:border-emerald-400 hover:bg-emerald-50 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10' : 'border-slate-100 bg-slate-50/50'}
                   ${!slot && type === 'LOAD' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1 hover:border-[#00b259] hover:shadow-lg hover:bg-white'}`}
                 disabled={!slot && type === 'LOAD'}
               >
-                <div>
+                <div className="text-center">
                   <div className="font-black text-lg text-slate-700 group-hover:text-[#00b259] transition-colors">THIẾT KẾ LƯU {i + 1}</div>
-                  <div className="text-[11px] text-slate-400 mt-1 font-semibold uppercase tracking-wider">
-                    {slot ? `Cập nhật: ${new Date(slot.updatedAt).toLocaleString('vi-VN')}` : '--- TRỐNG ---'}
+                  
+                  {/* Hiệu ứng hiển thị trạng thái mượt thay cho alert */}
+                  <div className={`text-[11px] mt-1 font-semibold uppercase tracking-wider transition-all duration-300 ${
+                    savedSlotIndex === i ? 'text-emerald-500 scale-105 font-black' : 'text-slate-400'
+                  }`}>
+                    {savedSlotIndex === i ? (
+                      '✓ ĐÃ LƯU THÀNH CÔNG!'
+                    ) : (
+                      slot ? `Cập nhật: ${new Date(slot.updatedAt).toLocaleString('vi-VN')}` : '--- TRỐNG ---'
+                    )}
                   </div>
-                </div>
-                <div className={`text-[10px] font-black tracking-widest px-4 py-2 rounded-xl transition-colors ${slot ? 'text-[#00b259] bg-emerald-100 group-hover:bg-[#00b259] group-hover:text-white' : 'text-slate-400 bg-slate-200'}`}>
-                  {slot ? `${slot.items.length} ITEMS` : 'TRỐNG'}
                 </div>
               </button>
             ))
@@ -404,7 +424,9 @@ function SceneContent() {
     return { minX: pos[0] - w/2, maxX: pos[0] + w/2, minZ: pos[2] - d/2, maxZ: pos[2] + d/2 };
   };
 
-  const checkIntersect2D = (r1, r2) => { return (r1.maxX > r2.minX && r1.minX < r2.maxX && r1.maxZ > r2.minZ && r1.minZ < r2.maxZ); };
+  const checkIntersect2D = (r1, r2) => { 
+    return (r1.maxX > r2.minX && r1.minX < r2.maxX && r1.maxZ > r2.minZ && r1.minZ < r2.maxZ); 
+  };
 
   const performUpdate = (id, data) => {
     const item = items.find(it => it.id === id); if (!item) return;
