@@ -16,7 +16,7 @@ function AdminDashboard({ onBack, settings, onSaveSettings }) {
   const [error, setError] = useState(false);
   const [smtpConfig, setSmtpConfig] = useState({
     host: '', port: '587', user: '', pass: '', secure: false, fromName: 'PhiSpace',
-    googleClientId: '', googleClientSecret: '', googleCallbackUrl: '${import.meta.env.VITE_API_URL}/api/designs/google/callback',
+    googleClientId: '', googleClientSecret: '', googleCallbackUrl: `${import.meta.env.VITE_API_URL}/api/designs/google/callback`,
   });
 
   // State Quản lý Model / Category
@@ -81,18 +81,18 @@ const handleChangeSlideImage = (id, file) => {
 
   const loadSmtpConfig = async () => {
     try {
-      const res = await fetch('${import.meta.env.VITE_API_URL}/api/auth/smtp-config');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/smtp-config`);
       const data = await res.json();
       setSmtpConfig({
         host: data.host || '', port: data.port || '587', user: '', pass: '', secure: data.secure || false, fromName: data.fromName || 'PhiSpace',
-        googleClientId: '', googleClientSecret: '', googleCallbackUrl: data.googleCallbackUrl || '${import.meta.env.VITE_API_URL}/api/designs/google/callback',
+        googleClientId: '', googleClientSecret: '', googleCallbackUrl: data.googleCallbackUrl || `${import.meta.env.VITE_API_URL}/api/designs/google/callback`,
       });
     } catch (err) {}
   };
 
   const handleSaveSmtp = async () => {
     try {
-      const res = await fetch('${import.meta.env.VITE_API_URL}/api/auth/smtp-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(smtpConfig) });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/smtp-config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(smtpConfig) });
       const data = await res.json();
       setMessage(data.msg || 'Cấu hình SMTP đã được lưu.'); setError(false);
     } catch (err) { setMessage('Lỗi khi lưu cấu hình SMTP.'); setError(true); }
@@ -102,7 +102,7 @@ const handleChangeSlideImage = (id, file) => {
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('${import.meta.env.VITE_API_URL}/api/auth/users', { headers: { 'x-auth-token': token } });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/users`, { headers: { 'x-auth-token': token } });
       if (res.ok) { const data = await res.json(); setUsersList(data); }
     } catch (err) {}
   };
@@ -260,10 +260,10 @@ const handleChangeSlideImage = (id, file) => {
       formData.append('offset', JSON.stringify([0, 0, 0])); formData.append('file', quickAddItem.file);
       if (quickAddItem.iconFile) formData.append('iconFile', quickAddItem.iconFile);
 
-      const res = await fetch('${import.meta.env.VITE_API_URL}/api/designs/furniture', { method: 'POST', headers: { 'x-auth-token': token }, body: formData });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/designs/furniture`, { method: 'POST', headers: { 'x-auth-token': token }, body: formData });
       if (res.ok) {
         setMessage("Đã thêm item thành công!");
-        const reloadRes = await fetch('${import.meta.env.VITE_API_URL}/api/designs/settings');
+        const reloadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/designs/settings`);
         const reloadData = await reloadRes.json();
         setLocalSettings(prev => ({ ...prev, models: reloadData.models || {} }));
         setQuickAddItem(null); setError(false);
@@ -292,7 +292,7 @@ const handleChangeSlideImage = (id, file) => {
 
   const handleSaveManual = async (settingsToSave) => {
     const token = localStorage.getItem('token');
-    await fetch('${import.meta.env.VITE_API_URL}/api/designs/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token }, body: JSON.stringify({ bannerText: settingsToSave.bannerText, slides: settingsToSave.slides || [], categoryIcons: settingsToSave.categoryIcons || {} }) });
+    await fetch(`${import.meta.env.VITE_API_URL}/api/designs/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token }, body: JSON.stringify({ bannerText: settingsToSave.bannerText, slides: settingsToSave.slides || [], categoryIcons: settingsToSave.categoryIcons || {} }) });
   };
 
   const handleSave = () => {
@@ -389,7 +389,7 @@ const handleChangeSlideImage = (id, file) => {
               <div className="grid grid-cols-1 gap-4">
                 <div><label className="text-xs font-bold text-slate-500">Google Client ID</label><input type="text" value={smtpConfig.googleClientId} onChange={(e) => setSmtpConfig({ ...smtpConfig, googleClientId: e.target.value })} className="w-full mt-2 p-3 bg-slate-50 rounded-xl border outline-none focus:border-[#00b259]" placeholder="Nhập Client ID" /></div>
                 <div><label className="text-xs font-bold text-slate-500">Google Client Secret</label><input type="password" value={smtpConfig.googleClientSecret} onChange={(e) => setSmtpConfig({ ...smtpConfig, googleClientSecret: e.target.value })} className="w-full mt-2 p-3 bg-slate-50 rounded-xl border outline-none focus:border-[#00b259]" placeholder="Nhập Client Secret" /></div>
-                <div><label className="text-xs font-bold text-slate-500">Google Callback URL</label><input type="text" value={smtpConfig.googleCallbackUrl} onChange={(e) => setSmtpConfig({ ...smtpConfig, googleCallbackUrl: e.target.value })} className="w-full mt-2 p-3 bg-slate-50 rounded-xl border outline-none" placeholder="${import.meta.env.VITE_API_URL}/api/designs/google/callback" /></div>
+                <div><label className="text-xs font-bold text-slate-500">Google Callback URL</label><input type="text" value={smtpConfig.googleCallbackUrl} onChange={(e) => setSmtpConfig({ ...smtpConfig, googleCallbackUrl: e.target.value })} className="w-full mt-2 p-3 bg-slate-50 rounded-xl border outline-none" placeholder={`${import.meta.env.VITE_API_URL}/api/designs/google/callback`} /></div>
               </div>
               <button onClick={handleSaveSmtp} className="px-6 py-3 bg-[#00b259] text-white font-bold rounded-xl">Cập nhật cấu hình SMTP / Google OAuth</button>
             </div>

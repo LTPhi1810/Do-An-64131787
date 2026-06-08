@@ -83,7 +83,7 @@ function Topbar({ user, onLogout, onBack, appState }) {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('${import.meta.env.VITE_API_URL}/api/notifications'); 
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`); 
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -108,7 +108,7 @@ function Topbar({ user, onLogout, onBack, appState }) {
 
   const handleMarkAsRead = async () => {
     try {
-      await fetch('${import.meta.env.VITE_API_URL}/api/notifications/read-all', { method: 'PUT' });
+      await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/read-all`, { method: 'PUT' });
       fetchNotifications();
     } catch (error) {}
   };
@@ -146,7 +146,7 @@ function Topbar({ user, onLogout, onBack, appState }) {
     }
 
     try {
-      const res = await fetch('${import.meta.env.VITE_API_URL}/api/auth/change-password', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/change-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: user.username, oldPassword: passForm.oldPass, newPassword: passForm.newPass })
