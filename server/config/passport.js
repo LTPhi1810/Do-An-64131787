@@ -8,7 +8,7 @@ const { loadConfig } = require('../controllers/smtpController');
 const config = loadConfig();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || config.googleClientId;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || config.googleClientSecret;
-const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || config.googleCallbackUrl || '${import.meta.env.VITE_API_URL}/api/auth/google/callback';
+const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || config.googleCallbackUrl || 'http://localhost:5000/api/auth/google/callback';
 
 if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy(
