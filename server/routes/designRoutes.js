@@ -63,7 +63,7 @@ router.post('/furniture', auth, upload.fields([{ name: 'file', maxCount: 1 }, { 
   try {
     const { category, name, path: base64Path, icon: base64Icon, size, scale, offset } = req.body;
     let finalPath = base64Path; 
-    if (req.files && req.files['file']) finalPath = `${import.meta.env.VITE_API_URL}/uploads/${req.files['file'][0].filename}`;
+    if (req.files && req.files['file']) finalPath = `${process.env.FRONTEND_URL}/uploads/${req.files['file'][0].filename}`;
 
     let finalIcon = base64Icon; 
     if (req.files && req.files['iconFile']) finalIcon = `${import.meta.env.VITE_API_URL}/uploads/${req.files['iconFile'][0].filename}`;
