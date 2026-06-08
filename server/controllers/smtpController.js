@@ -47,7 +47,7 @@ module.exports = {
         port: config.port || '587',
         secure: config.secure || false,
         fromName: config.fromName || 'PhiSpace',
-        googleCallbackUrl: config.googleCallbackUrl || 'http://localhost:5000/api/auth/google/callback',
+        googleCallbackUrl: config.googleCallbackUrl || '${import.meta.env.VITE_API_URL}/api/auth/google/callback',
         // Trả về rỗng để che giấu dữ liệu cũ
         user: '', 
         pass: '', 

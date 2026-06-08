@@ -6,6 +6,9 @@ const Setting = require('../models/Setting');
 const Furniture = require('../models/FurnitureModel');
 const Notification = require('../models/Notification'); // KÉO LÊN ĐẦU FILE CHO CHẮC CHẮN
 
+const cloudinary = require('../config/cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
@@ -13,13 +16,19 @@ const path = require('path');
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) { cb(null, uploadDir); },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname.replace(/\s+/g, '-'));
-  }
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    const isGlb = file.originalname.toLowerCase().endsWith('.glb');
+    return {
+      folder: 'phispace',
+      resource_type: isGlb ? 'raw' : 'image',
+      public_id: Date.now() + '-' + file.originalname.replace(/\s+/g, '-'),
+    };
+  },
 });
-const upload = multer({ storage: storage });
+
+const upload = multer({ storage });
 
 router.get('/settings', async (req, res) => {
   try {
@@ -54,10 +63,10 @@ router.post('/furniture', auth, upload.fields([{ name: 'file', maxCount: 1 }, { 
   try {
     const { category, name, path: base64Path, icon: base64Icon, size, scale, offset } = req.body;
     let finalPath = base64Path; 
-    if (req.files && req.files['file']) finalPath = `http://localhost:5000/uploads/${req.files['file'][0].filename}`;
+    if (req.files && req.files['file']) finalPath = `${import.meta.env.VITE_API_URL}/uploads/${req.files['file'][0].filename}`;
 
     let finalIcon = base64Icon; 
-    if (req.files && req.files['iconFile']) finalIcon = `http://localhost:5000/uploads/${req.files['iconFile'][0].filename}`;
+    if (req.files && req.files['iconFile']) finalIcon = `${import.meta.env.VITE_API_URL}/uploads/${req.files['iconFile'][0].filename}`;
 
     if (!finalPath) return res.status(400).json({ msg: "Thiếu dữ liệu file 3D (.glb)" });
 

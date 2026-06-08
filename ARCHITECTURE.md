@@ -21,7 +21,7 @@ phispace/
 
 ## 2. BACKEND API ENDPOINTS
 
-### Base URL: `http://localhost:5000/api/designs`
+### Base URL: `${import.meta.env.VITE_API_URL}/api/designs`
 
 ####  **Lấy Categories/Items từ Database**
 ```

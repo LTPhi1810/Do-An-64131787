@@ -133,7 +133,7 @@ function Auth({ onLoginSuccess, settings }) {
 
     try {
       setIsLoading(true);
-      const res = await fetch('http://localhost:5000/api/auth/forgot-password', {
+      const res = await fetch('${import.meta.env.VITE_API_URL}/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail }),
@@ -161,7 +161,7 @@ function Auth({ onLoginSuccess, settings }) {
 
     try {
       setIsLoading(true);
-      const res = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const res = await fetch('${import.meta.env.VITE_API_URL}/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail, token: resetToken, newPassword }),
@@ -179,7 +179,7 @@ function Auth({ onLoginSuccess, settings }) {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    window.location.href = '${import.meta.env.VITE_API_URL}/api/auth/google';
   };
 
   const handleSubmit = async (e) => {
@@ -197,7 +197,7 @@ function Auth({ onLoginSuccess, settings }) {
 
     const endpoint = isLogin ? 'login' : 'register';
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

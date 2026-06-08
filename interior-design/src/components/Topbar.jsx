@@ -83,7 +83,7 @@ function Topbar({ user, onLogout, onBack, appState }) {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/notifications'); 
+      const res = await fetch('${import.meta.env.VITE_API_URL}/api/notifications'); 
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -108,7 +108,7 @@ function Topbar({ user, onLogout, onBack, appState }) {
 
   const handleMarkAsRead = async () => {
     try {
-      await fetch('http://localhost:5000/api/notifications/read-all', { method: 'PUT' });
+      await fetch('${import.meta.env.VITE_API_URL}/api/notifications/read-all', { method: 'PUT' });
       fetchNotifications();
     } catch (error) {}
   };
@@ -120,7 +120,7 @@ function Topbar({ user, onLogout, onBack, appState }) {
     setPassForm({ oldPass: '', newPass: '', confirmPass: '' });
     
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/user-status/${user.email}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/user-status/${user.email}`);
       if (res.ok) {
         const data = await res.json();
         setHasPassword(data.hasPassword);
@@ -146,7 +146,7 @@ function Topbar({ user, onLogout, onBack, appState }) {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/change-password', {
+      const res = await fetch('${import.meta.env.VITE_API_URL}/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: user.username, oldPassword: passForm.oldPass, newPassword: passForm.newPass })

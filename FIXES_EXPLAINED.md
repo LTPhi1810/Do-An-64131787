@@ -191,7 +191,7 @@ useEffect(() => {
   const loadCategories = async () => {
     try {
       console.log('Fetching categories from API...');
-      const res = await fetch('http://localhost:5000/api/designs/categories');
+      const res = await fetch('${import.meta.env.VITE_API_URL}/api/designs/categories');
       if (res.ok) {
         const dbCategories = await res.json();
         console.log('Loaded categories from database:', Object.keys(dbCategories));
@@ -236,7 +236,7 @@ User click "Lưu"
   ↓
 SaveLoadModal.handleSlotAction(slotIndex=0)
   ↓
-fetch('http://localhost:5000/api/designs/save', {
+fetch('${import.meta.env.VITE_API_URL}/api/designs/save', {
   headers: { 'x-auth-token': token },  ← JWT token
   body: { slotIndex, items[], roomConfig }
 })
@@ -260,7 +260,7 @@ Frontend: Update state, close modal, show success
 ```
 User click "Tải"
   ↓
-SaveLoadModal.useEffect → fetch('http://localhost:5000/api/designs/load', {
+SaveLoadModal.useEffect → fetch('${import.meta.env.VITE_API_URL}/api/designs/load', {
   headers: { 'x-auth-token': token }
 })
   ↓
@@ -289,7 +289,7 @@ App mount
   ↓
 useEffect: loadCategories()
   ↓
-fetch('http://localhost:5000/api/designs/categories')
+fetch('${import.meta.env.VITE_API_URL}/api/designs/categories')
   ↓
 Server: Furniture.find()
   ↓

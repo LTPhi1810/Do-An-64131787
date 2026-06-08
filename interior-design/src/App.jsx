@@ -145,7 +145,7 @@ function SaveLoadModal({ type, onClose, items, roomConfig, onLoad, onSaveSuccess
     const fetchDesigns = async () => {
       try {
         const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('phiUser'))?.token;
-        const res = await fetch('http://localhost:5000/api/designs/save', { 
+        const res = await fetch('${import.meta.env.VITE_API_URL}/api/designs/save', { 
           headers: { 'x-auth-token': token } 
         });
         
@@ -165,7 +165,7 @@ function SaveLoadModal({ type, onClose, items, roomConfig, onLoad, onSaveSuccess
     if (type === 'SAVE') {
       try {
         const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('phiUser'))?.token;
-        const res = await fetch('http://localhost:5000/api/designs/save', {
+        const res = await fetch('${import.meta.env.VITE_API_URL}/api/designs/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
           body: JSON.stringify({ slotIndex: index, items, roomConfig })
@@ -290,7 +290,7 @@ function MainApp() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/designs/settings');
+        const res = await fetch('${import.meta.env.VITE_API_URL}/api/designs/settings');
         if (res.ok) { 
           const data = await res.json(); 
           const dbModels = data.models || {};
@@ -355,7 +355,7 @@ function MainApp() {
         <Route path="/admin" element={(user.role === 'admin' || user.username === 'admin') ? <AdminDashboard onBack={() => navigate('/dashboard')} settings={siteSettings} onSaveSettings={async (newSet) => { 
           const token = localStorage.getItem('token'); 
           const payload = { bannerText: newSet.bannerText, slides: newSet.slides, categoryIcons: newSet.categoryIcons, authBgImage: newSet.authBgImage }; 
-          try { await fetch('http://localhost:5000/api/designs/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token }, body: JSON.stringify(payload) }); } catch (e) {} 
+          try { await fetch('${import.meta.env.VITE_API_URL}/api/designs/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token }, body: JSON.stringify(payload) }); } catch (e) {} 
           setSiteSettings(newSet); 
         }} /> : <Navigate to="/dashboard" />} />
             
