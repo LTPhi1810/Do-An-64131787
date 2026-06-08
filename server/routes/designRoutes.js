@@ -66,7 +66,7 @@ router.post('/furniture', auth, upload.fields([{ name: 'file', maxCount: 1 }, { 
     if (req.files && req.files['file']) finalPath = `${process.env.FRONTEND_URL}/uploads/${req.files['file'][0].filename}`;
 
     let finalIcon = base64Icon; 
-    if (req.files && req.files['iconFile']) finalIcon = `${import.meta.env.VITE_API_URL}/uploads/${req.files['iconFile'][0].filename}`;
+    if (req.files && req.files['iconFile']) finalIcon = `${process.env.FRONTEND_URL}/uploads/${req.files['iconFile'][0].filename}`;
 
     if (!finalPath) return res.status(400).json({ msg: "Thiếu dữ liệu file 3D (.glb)" });
 
