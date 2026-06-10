@@ -139,6 +139,7 @@ exports.googleCallback = async (req, res) => {
     redirect.searchParams.set('googleToken', req.user.token);
     redirect.searchParams.set('googleEmail', encodeURIComponent(req.user.user.email));
     redirect.searchParams.set('googleName', encodeURIComponent(req.user.user.username));
+    redirect.searchParams.set('googleRole', encodeURIComponent(req.user.user.role || 'user'));
     return res.redirect(redirect.toString());
 };
 

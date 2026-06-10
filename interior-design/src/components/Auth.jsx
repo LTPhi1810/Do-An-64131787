@@ -72,12 +72,13 @@ function Auth({ onLoginSuccess, settings }) {
     const googleToken = params.get('googleToken');
     const googleEmail = params.get('googleEmail');
     const googleName = params.get('googleName');
+    const googleRole = params.get('googleRole');
     const error = params.get('googleError');
     const incomingResetToken = params.get('resetToken');
     const incomingResetEmail = params.get('resetEmail');
 
     if (googleToken && googleEmail && googleName) {
-      const user = { username: decodeURIComponent(googleName), email: decodeURIComponent(googleEmail) };
+      const user = { username: decodeURIComponent(googleName), email: decodeURIComponent(googleEmail), role: decodeURIComponent(googleRole) };
       localStorage.setItem('token', googleToken);
       localStorage.setItem('phiUser', JSON.stringify(user));
       onLoginSuccess(user);
