@@ -16,19 +16,36 @@ const path = require('path');
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    const isGlb = file.originalname.toLowerCase().endsWith('.glb');
-    return {
-      folder: 'phispace',
-      resource_type: isGlb ? 'raw' : 'image',
-      public_id: Date.now() + '-' + file.originalname.replace(/\s+/g, '-'),
-    };
-  },
-});
+const useCloudinary = !!(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+const storage = useCloudinary
+  ? new CloudinaryStorage({
+      cloudinary: cloudinary,
+      params: async (req, file) => {
+        const isGlb = file.originalname.toLowerCase().endsWith('.glb');
+        return {
+          folder: 'phispace',
+          resource_type: isGlb ? 'raw' : 'image',
+          public_id: Date.now() + '-' + file.originalname.replace(/\s+/g, '-'),
+        };
+      },
+    })
+  : multer.diskStorage({
+      destination: (req, file, cb) => cb(null, uploadDir),
+      filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname.replace(/\s+/g, '-'));
+      },
+    });
 
 const upload = multer({ storage });
+
+console.log(useCloudinary
+  ? '☁️  Upload mode: Cloudinary'
+  : '💾 Upload mode: Local disk (server/uploads)');
 
 router.get('/settings', async (req, res) => {
   try {
@@ -62,11 +79,18 @@ router.get('/settings', async (req, res) => {
 router.post('/furniture', auth, upload.fields([{ name: 'file', maxCount: 1 }, { name: 'iconFile', maxCount: 1 }]), async (req, res) => {
   try {
     const { category, name, path: base64Path, icon: base64Icon, size, scale, offset } = req.body;
-    let finalPath = base64Path; 
-    if (req.files && req.files['file']) finalPath = `${process.env.FRONTEND_URL}/uploads/${req.files['file'][0].filename}`;
+    let finalPath = base64Path;
+    if (req.files && req.files['file']) {
+      const f = req.files['file'][0];
+      // Cloudinary trả URL trong f.path; Disk storage thì f.filename là tên file vật lý
+      finalPath = useCloudinary ? f.path : `${req.protocol}://${req.get('host')}/uploads/${f.filename}`;
+    }
 
-    let finalIcon = base64Icon; 
-    if (req.files && req.files['iconFile']) finalIcon = `${process.env.FRONTEND_URL}/uploads/${req.files['iconFile'][0].filename}`;
+    let finalIcon = base64Icon;
+    if (req.files && req.files['iconFile']) {
+      const f = req.files['iconFile'][0];
+      finalIcon = useCloudinary ? f.path : `${req.protocol}://${req.get('host')}/uploads/${f.filename}`;
+    }
 
     if (!finalPath) return res.status(400).json({ msg: "Thiếu dữ liệu file 3D (.glb)" });
 
@@ -95,7 +119,9 @@ router.post('/furniture', auth, upload.fields([{ name: 'file', maxCount: 1 }, { 
 
     res.json({ msg: "Lưu thành công!", id: savedItem._id });
   } catch (err) {
-    res.status(500).json({ msg: "Lỗi ghi dữ liệu: " + err.message });
+    console.error('--- LỖI UPLOAD FURNITURE ---');
+    console.error(err);
+    res.status(500).json({ msg: "Lỗi ghi dữ liệu: " + (err.message || String(err)) });
   }
 });
 
