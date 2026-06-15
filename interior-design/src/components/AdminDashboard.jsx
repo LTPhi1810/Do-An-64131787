@@ -482,7 +482,7 @@ const handleChangeSlideImage = (id, file) => {
                   <div className="flex flex-wrap justify-between items-end mb-6 gap-4 border-b border-slate-100 pb-6">
                     <div className="relative w-full md:w-64">
                       <input 
-                        type="text" placeholder="Tìm kiếm model trong danh mục..." 
+                        type="text" placeholder="Tìm kiếm model" 
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold focus:border-[#00b259] transition-colors"
                         value={itemSearch} onChange={(e) => setItemSearch(e.target.value)}
                       />
