@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { getTransport, loadConfig } = require('./smtpController');
 const Notification = require('../models/Notification'); // Đảm bảo đã require model Notification ở đầu file
+const { Resend } = require('resend');
 
 const getFromAddress = () => {
   const config = loadConfig();
@@ -13,6 +14,20 @@ const getFromAddress = () => {
 };
 
 const sendEmail = async ({ to, subject, html, text }) => {
+  // Production (Railway): dùng Resend qua HTTPS, không bị chặn port
+  if (process.env.RESEND_API_KEY) {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { error } = await resend.emails.send({
+      from: process.env.RESEND_FROM || 'PhiSpace <onboarding@resend.dev>',
+      to,
+      subject,
+      html: html || `<p>${text}</p>`,
+    });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  // Localhost: dùng SMTP như cũ
   const transport = await getTransport();
   return transport.sendMail({
     from: getFromAddress(),
