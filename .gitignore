@@ -41,3 +41,8 @@ server/smtpConfig.json
 # Untracked large files (3D models, uploads)
 interior-design/public/models/
 server/uploads/
+.vercel
+
+backup/
+*.bson
+server/uploads/
