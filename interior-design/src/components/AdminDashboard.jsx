@@ -10,10 +10,15 @@ const CATEGORY_STANDARDS = {
 };
 
 function AdminDashboard({ onBack, settings, onSaveSettings }) {
-  const [activeTab, setActiveTab] = useState('HOMEPAGE');
+  const [activeTab, setActiveTab] = useState('DASHBOARD');
   const [localSettings, setLocalSettings] = useState(settings);
   const [message, setMessage] = useState('');
   const [error, setError] = useState(false);
+
+  // State Thống kê Dashboard
+  const [statsRange, setStatsRange] = useState('7d'); // 'today' | '7d' | '30d' | 'all'
+  const [statsData, setStatsData] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [smtpConfig, setSmtpConfig] = useState({
     host: '', port: '587', user: '', pass: '', secure: false, fromName: 'PhiSpace',
     googleClientId: '', googleClientSecret: '', googleCallbackUrl: `${import.meta.env.VITE_API_URL}/api/designs/google/callback`,
@@ -107,8 +112,19 @@ const handleChangeSlideImage = (id, file) => {
     } catch (err) {}
   };
 
+  // Thống kê Dashboard
+  const loadStats = async (range) => {
+    setStatsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/designs/stats?range=${range}`, { headers: { 'x-auth-token': token } });
+      if (res.ok) { const data = await res.json(); setStatsData(data); }
+    } catch (err) {} finally { setStatsLoading(false); }
+  };
+
   useEffect(() => { setLocalSettings(settings); }, [settings]);
   useEffect(() => { loadSmtpConfig(); loadUsers(); }, []);
+  useEffect(() => { loadStats(statsRange); }, [statsRange]);
   useEffect(() => {
     if (!message) return;
     const timer = setTimeout(() => setMessage(''), 3000);
@@ -311,6 +327,7 @@ const handleChangeSlideImage = (id, file) => {
     <div className="relative w-full bg-[#f8fafc] flex pt-16 min-h-screen">
       <div className="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-2 shrink-0">
         <h2 className="text-xs font-black text-slate-400 mb-4 px-2 uppercase tracking-widest">Menu Quản Lý</h2>
+        <TabButton active={activeTab === 'DASHBOARD'} onClick={() => setActiveTab('DASHBOARD')} label="Tổng quan Dashboard" />
         <TabButton active={activeTab === 'HOMEPAGE'} onClick={() => setActiveTab('HOMEPAGE')} label="Quản lý Giao diện" />
         <TabButton active={activeTab === 'SMTP'} onClick={() => setActiveTab('SMTP')} label="Cấu hình SMTP Email" />
         <TabButton active={activeTab === 'MODELS'} onClick={() => { setActiveTab('MODELS'); setSelectedCategoryView(null); }} label="Quản lý Models 3D" />
@@ -320,6 +337,7 @@ const handleChangeSlideImage = (id, file) => {
 
       <div className="flex-1 p-10 overflow-y-auto">
         <h1 className="text-3xl font-black mb-8 text-slate-800">
+          {activeTab === 'DASHBOARD' && 'Tổng quan hệ thống'}
           {activeTab === 'HOMEPAGE' && 'Cài đặt giao diện Trang chủ'}
           {activeTab === 'SMTP' && 'Cấu hình SMTP / Google OAuth'}
           {activeTab === 'MODELS' && !selectedCategoryView && 'Quản lý Models 3D'}
@@ -334,6 +352,15 @@ const handleChangeSlideImage = (id, file) => {
         )}
 
         <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 min-h-[60vh]">
+          {activeTab === 'DASHBOARD' && (
+            <DashboardOverview
+              statsData={statsData}
+              statsLoading={statsLoading}
+              statsRange={statsRange}
+              setStatsRange={setStatsRange}
+            />
+          )}
+
           {activeTab === 'HOMEPAGE' && (
             <div className="space-y-10">
               {/* SLIDES VÀ BANNER... */}
@@ -841,6 +868,110 @@ const handleChangeSlideImage = (id, file) => {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function DashboardOverview({ statsData, statsLoading, statsRange, setStatsRange }) {
+  const RANGE_OPTIONS = [
+    { value: 'today', label: 'Hôm nay' },
+    { value: '7d', label: '7 ngày qua' },
+    { value: '30d', label: '30 ngày qua' },
+    { value: 'all', label: 'Toàn thời gian' },
+  ];
+
+  const chart = statsData?.chart || [];
+  const maxCount = Math.max(1, ...chart.map(b => b.count));
+  const chartTitle = statsRange === '30d' ? 'Lưu lượng lưu dự án theo 30 ngày' : statsRange === 'today' ? 'Lưu lượng lưu dự án hôm nay' : 'Lưu lượng lưu dự án theo tuần';
+
+  // Cột "hôm nay" được làm nổi bật giống ảnh mẫu
+  const todayKey = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div className="space-y-8">
+      {/* Bộ chọn khoảng thời gian */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Số liệu toàn hệ thống</h3>
+        <div className="flex gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+          {RANGE_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setStatsRange(opt.value)}
+              className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-tight transition-all ${statsRange === opt.value ? 'bg-[#00b259] text-white shadow-md' : 'text-slate-500 hover:bg-white hover:text-slate-700'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Cards số liệu tổng quan */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          label="Dự án đang lưu (toàn hệ thống)"
+          value={statsData?.totalProjects}
+          loading={statsLoading}
+        />
+        <StatCard
+          label="Tổng tài khoản"
+          value={statsData?.totalUsers}
+          loading={statsLoading}
+        />
+        <StatCard
+          label="Tài khoản mới"
+          sublabel={RANGE_OPTIONS.find(o => o.value === statsRange)?.label}
+          value={statsData?.newUsersInRange}
+          loading={statsLoading}
+          accent
+        />
+        <StatCard
+          label="Dự án được lưu"
+          sublabel={RANGE_OPTIONS.find(o => o.value === statsRange)?.label}
+          value={statsData?.projectsSavedInRange}
+          loading={statsLoading}
+          accent
+        />
+      </div>
+
+      {/* Biểu đồ cột */}
+      <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6 md:p-8">
+        <h4 className="text-sm font-bold text-slate-500 mb-6">{chartTitle}</h4>
+        {statsLoading ? (
+          <div className="h-48 flex items-center justify-center text-slate-400 text-sm font-bold">Đang tải dữ liệu...</div>
+        ) : chart.length === 0 ? (
+          <div className="h-48 flex items-center justify-center text-slate-400 text-sm font-bold">Chưa có dữ liệu trong khoảng thời gian này.</div>
+        ) : (
+          <div className="flex items-end gap-3 md:gap-5 h-48 px-2">
+            {chart.map((b) => {
+              const isToday = b.date === todayKey;
+              const heightPct = Math.max(4, Math.round((b.count / maxCount) * 100));
+              return (
+                <div key={b.date} className="flex-1 flex flex-col items-center justify-end h-full gap-2 group">
+                  <span className={`text-xs font-black ${isToday ? 'text-[#00b259]' : 'text-slate-400'}`}>{b.count}</span>
+                  <div
+                    title={`${b.label} (${b.date}): ${b.count} dự án`}
+                    style={{ height: `${heightPct}%` }}
+                    className={`w-full rounded-t-xl transition-all duration-500 ${isToday ? 'bg-[#00b259] shadow-lg shadow-[#00b259]/30' : 'bg-slate-300 group-hover:bg-slate-400'}`}
+                  />
+                  <span className={`text-[10px] font-bold uppercase ${isToday ? 'text-[#00b259]' : 'text-slate-400'}`}>{b.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, sublabel, value, loading, accent }) {
+  return (
+    <div className={`p-6 rounded-3xl border ${accent ? 'border-[#00b259]/20 bg-[#00b259]/5' : 'border-slate-100 bg-white'} shadow-sm`}>
+      <p className={`text-3xl font-black ${accent ? 'text-[#00b259]' : 'text-slate-800'}`}>
+        {loading ? '—' : (value ?? 0).toLocaleString('vi-VN')}
+      </p>
+      <p className="text-xs font-bold text-slate-500 mt-2">{label}</p>
+      {sublabel && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">{sublabel}</p>}
     </div>
   );
 }

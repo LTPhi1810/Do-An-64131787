@@ -5,6 +5,7 @@ const Design = require('../models/Design');
 const Setting = require('../models/Setting');
 const Furniture = require('../models/FurnitureModel');
 const Notification = require('../models/Notification'); // KÉO LÊN ĐẦU FILE CHO CHẮC CHẮN
+const User = require('../models/User'); // Dùng cho route thống kê Dashboard
 
 const cloudinary = require('../config/cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -251,6 +252,79 @@ router.post('/save', auth, async (req, res) => {
     res.json({ msg: `Đã lưu vào File ${slotIndex + 1}!` });
   } catch (err) {
     res.status(500).json({ msg: 'Lỗi save' });
+  }
+});
+
+// ===================== DASHBOARD THỐNG KÊ (ADMIN) =====================
+// Trả về số liệu tổng quan: tổng dự án, tổng tài khoản, tài khoản mới & dự án
+// được lưu trong khoảng thời gian được chọn (today | 7d | 30d | all), kèm
+// dữ liệu biểu đồ cột theo từng ngày để vẽ "Lưu lượng tải dự án theo tuần".
+router.get('/stats', auth, async (req, res) => {
+  try {
+    const range = req.query.range || '7d'; // 'today' | '7d' | '30d' | 'all'
+
+    const now = new Date();
+    let rangeStart;
+    if (range === 'today') {
+      rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    } else if (range === '30d') {
+      rangeStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else if (range === 'all') {
+      rangeStart = new Date(0);
+    } else {
+      // default 7d
+      rangeStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    }
+
+    // Tổng số liệu toàn hệ thống (không phụ thuộc khoảng thời gian)
+    const totalProjects = await Design.countDocuments();
+    const totalUsers = await User.countDocuments();
+
+    // Số liệu trong khoảng thời gian được chọn
+    const newUsersInRange = await User.countDocuments({ createdAt: { $gte: rangeStart } });
+    const projectsSavedInRange = await Design.countDocuments({ updatedAt: { $gte: rangeStart } });
+
+    // Dữ liệu biểu đồ: số dự án được lưu/cập nhật theo từng ngày trong N ngày gần nhất
+    // (mặc định 7 ngày để khớp với "Lưu lượng tải dự án theo tuần"; nếu range = 30d thì lấy 30 ngày)
+    const chartDays = range === '30d' ? 30 : (range === 'today' ? 1 : 7);
+    const chartStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (chartDays - 1));
+
+    const designsForChart = await Design.find(
+      { updatedAt: { $gte: chartStart } },
+      { updatedAt: 1 }
+    );
+
+    // Khởi tạo sẵn các ngày để ngày không có dự án nào vẫn hiện cột = 0
+    const dayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const buckets = [];
+    for (let i = 0; i < chartDays; i++) {
+      const d = new Date(chartStart.getTime() + i * 24 * 60 * 60 * 1000);
+      buckets.push({
+        date: d.toISOString().slice(0, 10),
+        label: dayLabels[d.getDay()],
+        count: 0,
+      });
+    }
+    const bucketIndexByDate = {};
+    buckets.forEach((b, idx) => { bucketIndexByDate[b.date] = idx; });
+
+    designsForChart.forEach(d => {
+      const key = new Date(d.updatedAt).toISOString().slice(0, 10);
+      if (bucketIndexByDate[key] !== undefined) {
+        buckets[bucketIndexByDate[key]].count += 1;
+      }
+    });
+
+    res.json({
+      range,
+      totalProjects,
+      totalUsers,
+      newUsersInRange,
+      projectsSavedInRange,
+      chart: buckets,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: 'Lỗi server khi lấy thống kê: ' + err.message });
   }
 });
 
